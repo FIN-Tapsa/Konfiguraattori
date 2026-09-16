@@ -260,6 +260,14 @@ src/
   `src/firebase/config.ts` (kommentti + valmis paikka `getAuth`-kutsulle).
   Kun Auth lisätään, tiukenna myös `firestore.rules`/`storage.rules`
   (esimerkkisäännöt kommentoituna niissä tiedostoissa).
+- **Etusivun salasanakysely** (`src/components/PasswordGate.tsx`,
+  ympäristömuuttuja `VITE_APP_PASSWORD`): valinnainen, kevyt este
+  satunnaisille kävijöille. **Ei ole oikeaa tietoturvaa** - koska
+  sovelluksella ei ole backendia, salasana päätyy sellaisenaan julkiseen
+  JS-bundleen ja on kenen tahansa luettavissa selaimen kehittäjätyökaluilla.
+  Se ei myöskään suojaa itse Firestore/Storage-dataa (ks. yllä) - oikea
+  suojaus vaatii Firebase Authin. Jätä `VITE_APP_PASSWORD` tyhjäksi/pois
+  poistaaksesi kyselyn kokonaan käytöstä.
 - Simulointimoottori on tarkoituksella yksinkertaistettu joissain reunatapauksissa,
   esim. jos `requires`- ja `excludes`-säännöt ovat suoraan ristiriidassa
   saman nimikkeen kohdalla, tästä näytetään varoitus yhteenvetopaneelissa
