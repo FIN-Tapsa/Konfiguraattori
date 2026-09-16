@@ -3,7 +3,7 @@
 // See README.md for how to create a Firebase project and populate .env.
 
 import { initializeApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 // Extension point for later: import { getAuth } from "firebase/auth";
 
@@ -26,7 +26,11 @@ let storage: FirebaseStorage | undefined;
 
 if (isFirebaseConfigured) {
   app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
+  // Item/group/rule fields are mostly optional and represented as `undefined`
+  // when empty (e.g. an unfilled item code). The plain Firestore client
+  // rejects `undefined` field values outright, so this setting makes it
+  // silently omit them instead - equivalent to just not writing that field.
+  db = initializeFirestore(app, { ignoreUndefinedProperties: true });
   storage = getStorage(app);
 } else {
   // eslint-disable-next-line no-console
