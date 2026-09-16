@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// Huom: v1:ssä sovelluksessa EI ole kirjautumista (henkilökohtainen työkalu).
+// Koska Firebase-projektin asetukset (mm. apiKey) päätyvät joka tapauksessa
+// selaimeen ladattavaan julkiseen JS-bundleen, ne EIVÄT itsessään suojaa
+// dataa - suojaus tulee yksinomaan näistä security ruleista.
+//
+// Alla oleva "allow read, write: if true" pitää sovelluksen toimivana ilman
+// kirjautumista, mutta tarkoittaa että KUKA TAHANSA joka löytää projektisi
+// Firebase-konfiguraation voi lukea/muokata/poistaa tuoterakenteitasi.
+// Sopii vain henkilökohtaiseen, ei-arkaluontoiseen prototyyppaukseen.
+//
+// Kun lisäät Firebase Authin (katso laajennuskohta src/firebase/config.ts),
+// vaihda sääntö esim. muotoon:
+//   allow read, write: if request.auth != null;
+// tai tiukemmin, vain oman käyttäjän omistamiin dokumentteihin:
+//   allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /structures/{structureId} {
+      allow read, write: if true;
+    }
+  }
+}
