@@ -179,11 +179,11 @@ export async function importFromFile(file: File, structureName: string): Promise
     if (!name) {
       errors.push({ sheet: ITEMS_SHEET, row: excelRow, message: `Nimikkeeltä "${id}" puuttuu nimi.` });
     }
-    if (type !== "single" && type !== "assembly") {
+    if (type !== "single" && type !== "assembly" && type !== "category") {
       errors.push({
         sheet: ITEMS_SHEET,
         row: excelRow,
-        message: `Nimikkeen "${id}" type on "${type}", pitää olla "single" tai "assembly".`,
+        message: `Nimikkeen "${id}" type on "${type}", pitää olla "single", "assembly" tai "category".`,
       });
       return;
     }
@@ -254,11 +254,11 @@ export async function importFromFile(file: File, structureName: string): Promise
     if (rawParent && !items[rawParent]) {
       errors.push({ sheet: ITEMS_SHEET, row: excelRow, message: `Nimikkeen "${id}" parent_id "${rawParent}" ei vastaa mitään id:tä.` });
     }
-    if (rawParent && items[rawParent] && items[rawParent].type !== "assembly") {
+    if (rawParent && items[rawParent] && items[rawParent].type !== "assembly" && items[rawParent].type !== "category") {
       errors.push({
         sheet: ITEMS_SHEET,
         row: excelRow,
-        message: `Nimikkeen "${id}" yläkohde "${rawParent}" ei ole tyyppiä "assembly", joten sillä ei voi olla lapsia.`,
+        message: `Nimikkeen "${id}" yläkohde "${rawParent}" ei ole tyyppiä "assembly" tai "category", joten sillä ei voi olla lapsia.`,
       });
     }
   });

@@ -55,6 +55,8 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
     }
   };
 
+  const isCategory = item.type === "category";
+
   return (
     <div className="flex flex-col gap-4">
       <div>
@@ -68,15 +70,17 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-0.5 block text-xs text-slate-500">Nimikekoodi</label>
-          <input
-            type="text"
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-            value={item.code ?? ""}
-            onChange={(e) => onChange({ code: e.target.value || undefined })}
-          />
-        </div>
+        {!isCategory && (
+          <div>
+            <label className="mb-0.5 block text-xs text-slate-500">Nimikekoodi</label>
+            <input
+              type="text"
+              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              value={item.code ?? ""}
+              onChange={(e) => onChange({ code: e.target.value || undefined })}
+            />
+          </div>
+        )}
         <div>
           <label className="mb-0.5 block text-xs text-slate-500">Tyyppi</label>
           <select
@@ -86,6 +90,7 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
           >
             <option value="single">Yksittäinen nimike</option>
             <option value="assembly">Kokoonpano</option>
+            <option value="category">Väliotsikko</option>
           </select>
           {typeChangeError && <p className="mt-0.5 text-xs text-red-600">{typeChangeError}</p>}
         </div>
@@ -101,121 +106,134 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-0.5 block text-xs text-slate-500">
-            Hinta {item.type === "assembly" && item.pricingMode === "sumOfChildren" ? "(ei käytössä, summautuu lapsista)" : ""}
-          </label>
-          <input
-            type="number"
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
-            disabled={item.type === "assembly" && item.pricingMode === "sumOfChildren"}
-            value={item.price ?? ""}
-            onChange={(e) => onChange({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
-          />
-        </div>
-        {item.type === "assembly" && (
-          <div>
-            <label className="mb-0.5 block text-xs text-slate-500">Hinnoittelutapa</label>
-            <select
-              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-              value={item.pricingMode ?? "sumOfChildren"}
-              onChange={(e) => onChange({ pricingMode: e.target.value as PricingMode })}
-            >
-              <option value="sumOfChildren">Lasten hintojen summa</option>
-              <option value="fixed">Kiinteä hinta</option>
-            </select>
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="mb-0.5 block text-xs text-slate-500">Väri</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-              placeholder="#dc2626 tai punainen"
-              value={item.color ?? ""}
-              onChange={(e) => onChange({ color: e.target.value || undefined })}
-            />
-            {item.color && <span className="h-6 w-6 shrink-0 rounded border border-slate-300" style={{ backgroundColor: item.color }} />}
-          </div>
-        </div>
-        <div>
-          <label className="mb-0.5 block text-xs text-slate-500">Kuvan URL</label>
-          <input
-            type="text"
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-            placeholder="https://..."
-            value={item.imageUrl ?? ""}
-            onChange={(e) => onChange({ imageUrl: e.target.value || undefined })}
-          />
-          <p className="mt-0.5 text-xs text-slate-400">
-            Käy myös suoraan liitettynä linkkinä, esim. Google Drivestä (muunna jaettu tiedosto muotoon
-            drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
-          </p>
-        </div>
-      </div>
-
-      <div>
-        {isDriveConfigured ? (
-          <>
-            <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Google Driveen</label>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={uploading}
-              className="w-full text-xs"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleDriveUpload(file);
-              }}
-            />
-            <p className="mt-0.5 text-xs text-slate-400">
-              Ensimmäisellä kerralla avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi.
-            </p>
-          </>
-        ) : (
-          <>
-            <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={!isFirebaseConfigured || uploading}
-              className="w-full text-xs"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFirebaseUpload(file);
-              }}
-            />
-            {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
-          </>
-        )}
-        {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
-        {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-      </div>
-
-      {item.imageUrl && (
-        <img
-          src={item.imageUrl}
-          alt={item.name}
-          className="h-24 w-24 rounded border border-slate-300 object-cover"
-          onError={(e) => {
-            e.currentTarget.style.display = "none";
-          }}
-        />
+      {isCategory && (
+        <p className="text-xs text-slate-400">
+          Väliotsikolla ei ole hintaa, koodia, väriä tai kuvaa - se näkyy simuloinnissa aina, ilman omaa valintaa.
+          Sen omat lapset (Ryhmät-välilehti) toimivat normaalisti.
+        </p>
       )}
 
-      <div>
-        <h3 className="mb-1 text-sm font-semibold text-slate-700">Attribuutit</h3>
-        <AttributesEditor
-          attributes={item.attributes}
-          overrides={item.overridesParentAttributes}
-          onChange={(attributes, overridesParentAttributes) => onChange({ attributes, overridesParentAttributes })}
-        />
-      </div>
+      {!isCategory && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-0.5 block text-xs text-slate-500">
+                Hinta {item.type === "assembly" && item.pricingMode === "sumOfChildren" ? "(ei käytössä, summautuu lapsista)" : ""}
+              </label>
+              <input
+                type="number"
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
+                disabled={item.type === "assembly" && item.pricingMode === "sumOfChildren"}
+                value={item.price ?? ""}
+                onChange={(e) => onChange({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
+              />
+            </div>
+            {item.type === "assembly" && (
+              <div>
+                <label className="mb-0.5 block text-xs text-slate-500">Hinnoittelutapa</label>
+                <select
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  value={item.pricingMode ?? "sumOfChildren"}
+                  onChange={(e) => onChange({ pricingMode: e.target.value as PricingMode })}
+                >
+                  <option value="sumOfChildren">Lasten hintojen summa</option>
+                  <option value="fixed">Kiinteä hinta</option>
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-0.5 block text-xs text-slate-500">Väri</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  placeholder="#dc2626 tai punainen"
+                  value={item.color ?? ""}
+                  onChange={(e) => onChange({ color: e.target.value || undefined })}
+                />
+                {item.color && (
+                  <span className="h-6 w-6 shrink-0 rounded border border-slate-300" style={{ backgroundColor: item.color }} />
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="mb-0.5 block text-xs text-slate-500">Kuvan URL</label>
+              <input
+                type="text"
+                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                placeholder="https://..."
+                value={item.imageUrl ?? ""}
+                onChange={(e) => onChange({ imageUrl: e.target.value || undefined })}
+              />
+              <p className="mt-0.5 text-xs text-slate-400">
+                Käy myös suoraan liitettynä linkkinä, esim. Google Drivestä (muunna jaettu tiedosto muotoon
+                drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
+              </p>
+            </div>
+          </div>
+
+          <div>
+            {isDriveConfigured ? (
+              <>
+                <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Google Driveen</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploading}
+                  className="w-full text-xs"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleDriveUpload(file);
+                  }}
+                />
+                <p className="mt-0.5 text-xs text-slate-400">
+                  Ensimmäisellä kerralla avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi.
+                </p>
+              </>
+            ) : (
+              <>
+                <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={!isFirebaseConfigured || uploading}
+                  className="w-full text-xs"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFirebaseUpload(file);
+                  }}
+                />
+                {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
+              </>
+            )}
+            {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
+            {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+          </div>
+
+          {item.imageUrl && (
+            <img
+              src={item.imageUrl}
+              alt={item.name}
+              className="h-24 w-24 rounded border border-slate-300 object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )}
+
+          <div>
+            <h3 className="mb-1 text-sm font-semibold text-slate-700">Attribuutit</h3>
+            <AttributesEditor
+              attributes={item.attributes}
+              overrides={item.overridesParentAttributes}
+              onChange={(attributes, overridesParentAttributes) => onChange({ attributes, overridesParentAttributes })}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

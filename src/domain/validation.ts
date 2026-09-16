@@ -111,6 +111,14 @@ export function validateStructure(structure: ProductStructure): ValidationIssue[
           itemId: memberId,
         });
       }
+      if (structure.items[memberId]?.type === "category") {
+        issues.push({
+          level: "error",
+          message: `Väliotsikko "${structure.items[memberId]?.name}" ei voi kuulua valintaryhmään - se näkyy simuloinnissa aina.`,
+          groupId: group.id,
+          itemId: memberId,
+        });
+      }
       const existingGroupId = byMember.get(memberId);
       if (existingGroupId && existingGroupId !== group.id) {
         issues.push({

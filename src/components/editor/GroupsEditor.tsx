@@ -28,7 +28,10 @@ export function GroupsEditor({
 
   const groups = Object.values(structure.groups).filter((g) => g.parentItemId === parentItemId);
   const groupedIds = new Set(groups.flatMap((g) => g.memberItemIds));
-  const ungrouped = parent.children.filter((c) => !groupedIds.has(c));
+  // Category children are never a selectable choice (they auto-activate, see
+  // domain/simulation.ts) so they don't need group assignment or a required toggle.
+  const ungrouped = parent.children.filter((c) => !groupedIds.has(c) && structure.items[c]?.type !== "category");
+  const categoryChildren = parent.children.filter((c) => structure.items[c]?.type === "category");
 
   const moveMember = (memberId: string, targetGroupId: string | "none") => {
     const currentGroup = getGroupForMember(structure, memberId);
@@ -155,6 +158,26 @@ export function GroupsEditor({
           })}
         </ul>
       </div>
+
+      {categoryChildren.length > 0 && (
+        <div>
+          <h4 className="mb-1 text-sm font-semibold text-slate-700">Väliotsikot</h4>
+          <p className="mb-1 text-xs text-slate-400">
+            Väliotsikot näkyvät simuloinnissa aina, ilman omaa valintaa - eivät tarvitse ryhmää.
+          </p>
+          <ul className="flex flex-col gap-1">
+            {categoryChildren.map((childId) => {
+              const child = structure.items[childId];
+              if (!child) return null;
+              return (
+                <li key={childId} className="rounded border border-slate-200 px-2 py-1 text-sm text-slate-600">
+                  📁 {child.name}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

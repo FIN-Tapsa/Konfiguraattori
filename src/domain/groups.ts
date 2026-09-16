@@ -22,6 +22,9 @@ export function getGroupsForParent(structure: ProductStructure, parentId: string
     if (groupedChildIds.has(childId)) continue;
     const child = structure.items[childId];
     if (!child) continue;
+    // Category items are never themselves a selectable choice - they are
+    // auto-activated (see simulation.ts) so their own children stay reachable.
+    if (child.type === "category") continue;
     const required = child.required ?? false;
     result.push({
       id: `implicit-${childId}`,

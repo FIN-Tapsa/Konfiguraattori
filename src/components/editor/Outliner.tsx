@@ -151,7 +151,7 @@ function OutlinerNode({
   // before the `!item` guard below (which can happen transiently between
   // a delete and the outliner re-rendering without the deleted id).
   const draggable = useDraggable({ id: itemId, disabled: isRoot });
-  const droppableInto = useDroppable({ id: `into-${itemId}`, disabled: item?.type !== "assembly" });
+  const droppableInto = useDroppable({ id: `into-${itemId}`, disabled: item?.type !== "assembly" && item?.type !== "category" });
   const droppableAfter = useDroppable({ id: `after-${itemId}`, disabled: isRoot });
 
   if (!item) return null;
@@ -185,20 +185,20 @@ function OutlinerNode({
           ref={draggable.setNodeRef}
           {...draggable.listeners}
           {...draggable.attributes}
-          className={`flex cursor-grab select-none items-center gap-1 ${item.type === "assembly" ? "font-medium" : ""}`}
+          className={`flex cursor-grab select-none items-center gap-1 ${item.type !== "single" ? "font-medium" : ""} ${item.type === "category" ? "italic text-slate-500" : ""}`}
           onClick={() => onSelect(itemId)}
         >
           {item.imageUrl ? (
             <img src={item.imageUrl} alt="" className="h-4 w-4 shrink-0 rounded-sm object-cover" />
           ) : (
-            <span className="shrink-0">{item.type === "assembly" ? "📦" : "▫️"}</span>
+            <span className="shrink-0">{item.type === "assembly" ? "📦" : item.type === "category" ? "📁" : "▫️"}</span>
           )}
           {item.name || "(nimetön)"}
         </span>
         {hasError && <span className="text-red-600" title="Virhe">⚠</span>}
         {!hasError && hasWarning && <span className="text-amber-500" title="Huomio">⚠</span>}
         <span className="ml-auto hidden gap-1 group-hover:flex">
-          {item.type === "assembly" && (
+          {(item.type === "assembly" || item.type === "category") && (
             <button
               type="button"
               className="rounded px-1 text-xs text-sky-700 hover:bg-sky-200"

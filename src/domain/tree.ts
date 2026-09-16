@@ -155,8 +155,8 @@ export function reparentItem(
   }
   const newParent = structure.items[newParentId];
   if (!newParent) throw new Error(`Parent item ${newParentId} not found`);
-  if (newParent.type !== "assembly") {
-    throw new Error("Vain kokoonpanolle (assembly) voi lisätä lapsinimikkeitä");
+  if (newParent.type !== "assembly" && newParent.type !== "category") {
+    throw new Error("Vain kokoonpanolle tai väliotsikolle voi lisätä lapsinimikkeitä");
   }
 
   const oldParentId = getParentId(structure, itemId);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ItemType } from "../../types";
 import type { ProductStructureController } from "../../state/useProductStructure";
 import { Outliner } from "./Outliner";
 import { ItemPanel } from "./ItemPanel";
@@ -82,7 +83,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
             <TabButton active={tab === "item"} onClick={() => setTab("item")}>
               Nimike
             </TabButton>
-            {selectedItem.type === "assembly" && (
+            {(selectedItem.type === "assembly" || selectedItem.type === "category") && (
               <TabButton active={tab === "groups"} onClick={() => setTab("groups")}>
                 Ryhmät
               </TabButton>
@@ -100,7 +101,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
               onChange={(changes) => controller.updateItem(selectedItem.id, changes)}
             />
           )}
-          {tab === "groups" && selectedItem.type === "assembly" && (
+          {tab === "groups" && (selectedItem.type === "assembly" || selectedItem.type === "category") && (
             <GroupsEditor
               structure={structure}
               parentItemId={selectedItem.id}
@@ -154,10 +155,10 @@ function AddItemDialog({
   onConfirm,
 }: {
   onCancel: () => void;
-  onConfirm: (name: string, type: "single" | "assembly") => void;
+  onConfirm: (name: string, type: ItemType) => void;
 }) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<"single" | "assembly">("single");
+  const [type, setType] = useState<ItemType>("single");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -175,10 +176,11 @@ function AddItemDialog({
         <select
           className="mb-4 w-full rounded border border-slate-300 px-2 py-1 text-sm"
           value={type}
-          onChange={(e) => setType(e.target.value as "single" | "assembly")}
+          onChange={(e) => setType(e.target.value as ItemType)}
         >
           <option value="single">Yksittäinen nimike</option>
           <option value="assembly">Kokoonpano</option>
+          <option value="category">Väliotsikko</option>
         </select>
         <div className="flex justify-end gap-2">
           <button type="button" className="rounded px-3 py-1 text-sm text-slate-600 hover:bg-slate-100" onClick={onCancel}>

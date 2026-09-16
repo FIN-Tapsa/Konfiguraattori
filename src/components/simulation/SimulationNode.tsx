@@ -16,6 +16,11 @@ interface SimulationNodeProps {
 
 export function SimulationNode({ structure, parentItemId, selected, effects, onToggle, depth }: SimulationNodeProps) {
   const groupStatuses = getGroupStatuses(structure, selected, parentItemId);
+  const parent = structure.items[parentItemId];
+  // Categories are never a selectable choice - they auto-activate (see
+  // domain/simulation.ts) and are rendered here as a plain heading whose own
+  // children are shown right below it, exactly like any other active parent.
+  const categoryChildIds = parent?.children.filter((id) => structure.items[id]?.type === "category") ?? [];
 
   return (
     <div style={{ marginLeft: depth > 0 ? 16 : 0 }} className="flex flex-col gap-3">
@@ -85,6 +90,23 @@ export function SimulationNode({ structure, parentItemId, selected, effects, onT
           </div>
         </fieldset>
       ))}
+      {categoryChildIds.map((categoryId) => {
+        const category = structure.items[categoryId];
+        if (!category || !selected.has(categoryId)) return null;
+        return (
+          <div key={categoryId}>
+            <h4 className="mb-2 border-b border-slate-300 pb-1 text-sm font-semibold text-slate-600">{category.name}</h4>
+            <SimulationNode
+              structure={structure}
+              parentItemId={categoryId}
+              selected={selected}
+              effects={effects}
+              onToggle={onToggle}
+              depth={depth}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

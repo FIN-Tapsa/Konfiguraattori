@@ -32,6 +32,28 @@ function removeWithDescendants(structure: ProductStructure, selected: Set<string
   return next;
 }
 
+/**
+ * Category items are never a selectable choice - they auto-activate as soon
+ * as their own parent is active, so their children stay reachable without an
+ * extra click. Adds every such reachable-but-missing category to `selected`.
+ */
+function activateCategories(structure: ProductStructure, selected: Set<string>): { selected: Set<string>; changed: boolean } {
+  let next = selected;
+  let changed = false;
+  for (const id of selected) {
+    const item = structure.items[id];
+    if (!item) continue;
+    for (const childId of item.children) {
+      if (structure.items[childId]?.type === "category" && !next.has(childId)) {
+        if (next === selected) next = new Set(selected);
+        next.add(childId);
+        changed = true;
+      }
+    }
+  }
+  return { selected: next, changed };
+}
+
 export interface RuleEffects {
   /** itemId -> human-readable reasons it is force-selected and locked. */
   locked: Map<string, string[]>;
@@ -82,6 +104,10 @@ function applyRules(structure: ProductStructure, selectedIn: Set<string>): { sel
         }
       }
     }
+
+    const categoryResult = activateCategories(structure, selected);
+    selected = categoryResult.selected;
+    if (categoryResult.changed) changed = true;
   }
 
   const conflicts: string[] = [];

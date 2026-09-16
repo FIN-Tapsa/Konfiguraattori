@@ -46,16 +46,27 @@ Ydintyypit löytyvät tiedostosta [`src/types/index.ts`](src/types/index.ts).
 ### Nimike (`Item`)
 
 Puun jokainen haara on yksi nimike: `id`, `name`, `code` (valinnainen),
-`description`, `type` (`"single"` tai `"assembly"`), `price`, `pricingMode`
+`description`, `type`, `price`, `pricingMode`
 (vain `assembly`: `"sumOfChildren"` tai `"fixed"`), `color`, `imageUrl`,
 `attributes` (avain-arvo-lista), `overridesParentAttributes` (mitkä
 attribuuttinimet tämä nimike nimenomaisesti ylikirjoittaa), `children`
-(vain `assembly`).
+(vain `assembly`/`category`).
+
+`type` on yksi kolmesta:
+- `"single"` - yksittäinen nimike (lehti)
+- `"assembly"` - kokoonpano, hinnoiteltu (`sumOfChildren`/`fixed`), voi olla
+  valittavissa sisarustensa kesken
+- `"category"` - pelkkä väliotsikko (esim. "Lisävarusteet"): vain nimi ja
+  kuvaus, ei hintaa/koodia/väriä. Ei ole itse valinta - se on aina aktiivinen
+  heti kun sen oma yläkohde on aktiivinen, joten sen lapset ovat aina
+  saavutettavissa ilman että käyttäjän tarvitsee valita otsikkoa erikseen.
+  Sen omat lapset toimivat muuten täysin normaalisti (omat ryhmät, hinnat, jne).
 
 Lisäksi mallissa on kenttä `required?: boolean`, joka määrittää onko
 nimike pakollinen silloin kun se **ei kuulu mihinkään valintaryhmään**
 (ks. alla) - tämä toteuttaa spec-vaatimuksen "nimike joka ei kuulu
-ryhmään käyttäytyy yksittäisenä valinnaisena/pakollisena lapsena".
+ryhmään käyttäytyy yksittäisenä valinnaisena/pakollisena lapsena". Ei
+koske `category`-tyyppiä, joka ei koskaan ole ryhmän jäsen.
 
 ### Valintaryhmä (`SelectionGroup`)
 
@@ -131,7 +142,7 @@ säilyttämiseksi vienti/tuonti-kierroksella):
 | `name` | Nimi |
 | `code` | Nimikekoodi (laajennus) |
 | `description` | Kuvaus |
-| `type` | `single` tai `assembly` |
+| `type` | `single`, `assembly` tai `category` |
 | `price` | Hinta |
 | `pricing_mode` | `sumOfChildren` tai `fixed` (vain assembly) |
 | `color` | Väri |

@@ -1,7 +1,18 @@
 // Core domain types for the product structure (BOM/PDM-style item tree)
 // and the sales configurator simulation built on top of it.
 
-export type ItemType = "single" | "assembly";
+/**
+ * "single": leaf item.
+ * "assembly": container with children, priced (sumOfChildren or fixed), can be
+ *   a selectable choice among its siblings.
+ * "category": purely organizational grouping heading, e.g. "Lisävarusteet".
+ *   Has only a name/description, no price/code/color. Never itself a
+ *   selectable choice - it is automatically active whenever its own parent
+ *   is active (see domain/simulation.ts activateCategories), so its children
+ *   are always reachable without the user having to pick the heading itself.
+ *   Its children otherwise behave completely normally (own groups, pricing, etc).
+ */
+export type ItemType = "single" | "assembly" | "category";
 export type PricingMode = "sumOfChildren" | "fixed";
 
 export interface AttributeEntry {
@@ -24,7 +35,7 @@ export interface Item {
   attributes: AttributeEntry[];
   /** Attribute keys this item explicitly overrides rather than inheriting from its parent path. */
   overridesParentAttributes: string[];
-  /** Child item ids, in display order. Only meaningful when type === "assembly". */
+  /** Child item ids, in display order. Only meaningful when type === "assembly" or "category". */
   children: string[];
   /**
    * Whether this item is mandatory when it does NOT belong to any SelectionGroup.
