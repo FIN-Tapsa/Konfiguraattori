@@ -4,8 +4,42 @@
 import { v4 as uuid } from "uuid";
 import type { Item, ProductStructure } from "../types";
 
+// Default väliotsikko ("category") headings every new blank structure starts
+// with, matching the typical section breakdown of a heavy vehicle's product
+// structure. Purely a convenience starting point - freely rename/reorder/
+// delete them like any other item.
+const DEFAULT_CATEGORY_NAMES = [
+  "Alusta ja varusteet",
+  "Moottori ja vaihteisto",
+  "Etuakseli ja ohjaus",
+  "Taka-akseli",
+  "Polttoainesäiliö",
+  "Paineilmajärjestelmä",
+  "Alustan sähkölaitteet ja valot",
+  "Ohjaamon sähkölaitteet",
+  "Viestintälaitteet",
+  "Ohjaamon perusvarusteet",
+  "Ohjaamon suojavarusteet",
+  "Ohjaamon sisustus",
+  "Ohjaamon kattovarustus",
+  "Ohjaamon ja alustan maalaus",
+  "Perävaunun veto ja liitäntä",
+  "Rengasvarusteet",
+  "Ensiapuvälineet",
+  "Varusteet",
+  "Renkaat",
+];
+
 export function createEmptyStructure(name: string): ProductStructure {
   const rootId = uuid();
+  const categories: Item[] = DEFAULT_CATEGORY_NAMES.map((categoryName) => ({
+    id: uuid(),
+    name: categoryName,
+    type: "category",
+    attributes: [],
+    overridesParentAttributes: [],
+    children: [],
+  }));
   const root: Item = {
     id: rootId,
     name,
@@ -13,13 +47,16 @@ export function createEmptyStructure(name: string): ProductStructure {
     pricingMode: "sumOfChildren",
     attributes: [],
     overridesParentAttributes: [],
-    children: [],
+    children: categories.map((c) => c.id),
   };
+  const items: Record<string, Item> = { [rootId]: root };
+  for (const category of categories) items[category.id] = category;
+
   return {
     id: uuid(),
     name,
     rootItemId: rootId,
-    items: { [rootId]: root },
+    items,
     groups: {},
     rules: {},
     createdAt: Date.now(),
