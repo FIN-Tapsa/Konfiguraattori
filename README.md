@@ -204,21 +204,39 @@ build toimii GitHub Pages -projektisivulla
 (`https://<käyttäjä>.github.io/<repo>/`) ilman että repon nimeä pitää
 kovakoodata.
 
-**Vaihtoehto A - `gh-pages`-paketilla (nopein):**
+**Ensisijainen tapa - GitHub Actions (automaattinen):**
+
+Repossa on valmis workflow [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml),
+joka buildaa ja julkaisee sovelluksen GitHub Pagesiin automaattisesti aina kun
+`main`-haaraan pushataan (tai manuaalisesti "Run workflow" -napista). Se ajaa
+`npm ci && npm run build`, välittää `VITE_FIREBASE_*`-arvot GitHub Secretseistä
+build-stepin ympäristömuuttujina (koska `.env` ei ole repossa) ja julkaisee
+`dist/`-kansion `actions/upload-pages-artifact` + `actions/deploy-pages`
+-actioneilla.
+
+Jotta workflow toimii, tee kertaluontoisesti GitHubin puolella:
+
+1. **Settings -> Pages -> Source: GitHub Actions**
+2. **Settings -> Secrets and variables -> Actions**: lisää samat
+   `VITE_FIREBASE_*`-arvot jotka ovat omassa `.env`-tiedostossasi
+   (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+   `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`,
+   `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`)
+
+Näitä kahta kohtaa ei voi tehdä koodista käsin - ne ovat repon/organisaation
+asetuksia GitHubin puolella.
+
+**Nopea vaihtoehto ilman Firebase-yhteyttä - `gh-pages`-paketilla:**
 
 ```bash
 npm run deploy
 ```
 
-Tämä buildaa ja työntää `dist/`-kansion `gh-pages`-haaraan (paketti `gh-pages`
-on jo devDependency). Ota GitHub-repon Settings -> Pages -asetuksista
-lähteeksi `gh-pages`-haara.
-
-**Vaihtoehto B - GitHub Actions:** lisää workflow joka ajaa `npm ci && npm run build`
-ja julkaisee `dist/`-kansion `actions/deploy-pages`-actionilla. Muista lisätä
-`VITE_FIREBASE_*`-muuttujat repon Settings -> Secrets and variables -> Actions
--kohtaan ja välittää ne build-stepin ympäristömuuttujina, koska `.env`
-ei ole repossa.
+Tämä buildaa ja työntää `dist/`-kansion `gh-pages`-haaraan paikallisesti (paketti
+`gh-pages` on devDependency) - kätevä nopeaan visuaaliseen tarkistukseen, mutta
+vaatii tällöin Settings -> Pages -> Source: `gh-pages`-haara, ja koska `.env`
+ei tule mukaan buildiin komentoriviltä ajettuna, Firestore/Storage eivät ole
+käytössä ellet aseta `VITE_FIREBASE_*`-muuttujia ympäristöösi ennen komentoa.
 
 ## Kansiorakenne
 
