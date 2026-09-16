@@ -169,10 +169,15 @@ function OutlinerNode({
           ref={draggable.setNodeRef}
           {...draggable.listeners}
           {...draggable.attributes}
-          className={`cursor-grab select-none ${item.type === "assembly" ? "font-medium" : ""}`}
+          className={`flex cursor-grab select-none items-center gap-1 ${item.type === "assembly" ? "font-medium" : ""}`}
           onClick={() => onSelect(itemId)}
         >
-          {item.type === "assembly" ? "📦" : "▫️"} {item.name || "(nimetön)"}
+          {item.imageUrl ? (
+            <img src={item.imageUrl} alt="" className="h-4 w-4 shrink-0 rounded-sm object-cover" />
+          ) : (
+            <span className="shrink-0">{item.type === "assembly" ? "📦" : "▫️"}</span>
+          )}
+          {item.name || "(nimetön)"}
         </span>
         {hasError && <span className="text-red-600" title="Virhe">⚠</span>}
         {!hasError && hasWarning && <span className="text-amber-500" title="Huomio">⚠</span>}

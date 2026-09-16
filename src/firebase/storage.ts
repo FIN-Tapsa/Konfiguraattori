@@ -12,11 +12,34 @@ function requireStorage() {
   return storage;
 }
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export async function uploadItemImage(structureId: string, itemId: string, file: File): Promise<string> {
   const storageInstance = requireStorage();
   const path = `structures/${structureId}/items/${itemId}/${Date.now()}_${file.name}`;
   const fileRef = ref(storageInstance, path);
-  await uploadBytes(fileRef, file);
+  // uploadBytes retries transient/network errors with backoff, which can make
+  // a misconfigured bucket (not created, wrong rules, ...) look like it hangs
+  // forever instead of failing. Fail fast with a clear message instead.
+  await withTimeout(
+    uploadBytes(fileRef, file),
+    20000,
+    "Kuvan lataus aikakatkaistiin (20s). Tarkista että Firebase Storage on luotu ja että storage.rules on julkaistu."
+  );
   return getDownloadURL(fileRef);
 }
 
