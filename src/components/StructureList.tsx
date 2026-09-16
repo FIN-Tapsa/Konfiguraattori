@@ -8,16 +8,23 @@ import { buildSampleStructure } from "../domain/sampleData";
 import { isFirebaseConfigured } from "../firebase/config";
 import * as store from "../firebase/structures";
 import type { ProductStructure } from "../types";
+import { ConfirmDialog, PromptDialog } from "./Dialogs";
 
 interface StructureListProps {
   onOpen: (structure: ProductStructure) => void;
 }
+
+type PendingAction =
+  | { type: "create"; template: ProductStructure }
+  | { type: "duplicate"; id: string; currentName: string }
+  | { type: "delete"; id: string; name: string };
 
 export function StructureList({ onOpen }: StructureListProps) {
   const [structures, setStructures] = useState<ProductStructureSummary[]>([]);
   const [loading, setLoading] = useState(isFirebaseConfigured);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingAction | null>(null);
 
   const refresh = async () => {
     if (!isFirebaseConfigured) return;
@@ -36,10 +43,8 @@ export function StructureList({ onOpen }: StructureListProps) {
     refresh();
   }, []);
 
-  const handleCreate = async (template: ProductStructure) => {
-    const name = window.prompt("Uuden tuoterakenteen nimi:", template.name) ?? "";
-    if (!name.trim()) return;
-    const structure = { ...template, name: name.trim() };
+  const handleCreate = async (template: ProductStructure, name: string) => {
+    const structure = { ...template, name };
     if (isFirebaseConfigured) {
       try {
         await store.saveStructure(structure);
@@ -64,14 +69,12 @@ export function StructureList({ onOpen }: StructureListProps) {
     }
   };
 
-  const handleDuplicate = async (id: string, currentName: string) => {
-    const name = window.prompt("Tallenna nimellä:", `${currentName} (kopio)`) ?? "";
-    if (!name.trim()) return;
+  const handleDuplicate = async (id: string, name: string) => {
     setBusyId(id);
     setError(null);
     try {
       const source = await store.loadStructure(id);
-      const copy = await store.duplicateStructure(source, name.trim());
+      const copy = await store.duplicateStructure(source, name);
       await refresh();
       onOpen(copy);
     } catch (e) {
@@ -81,8 +84,7 @@ export function StructureList({ onOpen }: StructureListProps) {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Poistetaanko tuoterakenne "${name}" pysyvästi?`)) return;
+  const handleDelete = async (id: string) => {
     setBusyId(id);
     setError(null);
     try {
@@ -114,14 +116,14 @@ export function StructureList({ onOpen }: StructureListProps) {
         <button
           type="button"
           className="rounded bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-          onClick={() => handleCreate(createEmptyStructure("Uusi tuoterakenne"))}
+          onClick={() => setPending({ type: "create", template: createEmptyStructure("Uusi tuoterakenne") })}
         >
           + Uusi tyhjä rakenne
         </button>
         <button
           type="button"
           className="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-          onClick={() => handleCreate(buildSampleStructure())}
+          onClick={() => setPending({ type: "create", template: buildSampleStructure() })}
         >
           + Uusi esimerkkidatalla
         </button>
@@ -150,7 +152,7 @@ export function StructureList({ onOpen }: StructureListProps) {
               type="button"
               disabled={busyId === s.id}
               className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-              onClick={() => handleDuplicate(s.id, s.name)}
+              onClick={() => setPending({ type: "duplicate", id: s.id, currentName: s.name })}
             >
               Tallenna nimellä
             </button>
@@ -158,7 +160,7 @@ export function StructureList({ onOpen }: StructureListProps) {
               type="button"
               disabled={busyId === s.id}
               className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
-              onClick={() => handleDelete(s.id, s.name)}
+              onClick={() => setPending({ type: "delete", id: s.id, name: s.name })}
             >
               Poista
             </button>
@@ -168,6 +170,49 @@ export function StructureList({ onOpen }: StructureListProps) {
           <p className="text-sm text-slate-400">Ei tallennettuja rakenteita vielä.</p>
         )}
       </ul>
+
+      {pending?.type === "create" && (
+        <PromptDialog
+          title="Uusi tuoterakenne"
+          label="Nimi"
+          defaultValue={pending.template.name}
+          confirmLabel="Luo"
+          onCancel={() => setPending(null)}
+          onConfirm={(name) => {
+            const template = pending.template;
+            setPending(null);
+            handleCreate(template, name);
+          }}
+        />
+      )}
+      {pending?.type === "duplicate" && (
+        <PromptDialog
+          title="Tallenna nimellä"
+          label="Uusi nimi"
+          defaultValue={`${pending.currentName} (kopio)`}
+          confirmLabel="Tallenna"
+          onCancel={() => setPending(null)}
+          onConfirm={(name) => {
+            const id = pending.id;
+            setPending(null);
+            handleDuplicate(id, name);
+          }}
+        />
+      )}
+      {pending?.type === "delete" && (
+        <ConfirmDialog
+          title="Poista tuoterakenne"
+          message={`Poistetaanko tuoterakenne "${pending.name}" pysyvästi?`}
+          confirmLabel="Poista"
+          danger
+          onCancel={() => setPending(null)}
+          onConfirm={() => {
+            const id = pending.id;
+            setPending(null);
+            handleDelete(id);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import type { ProductStructure, ValidationIssue } from "../../types";
 import { getParentId } from "../../domain/tree";
+import { ConfirmDialog } from "../Dialogs";
 
 interface OutlinerProps {
   structure: ProductStructure;
@@ -25,6 +26,7 @@ interface OutlinerProps {
 
 export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAddChild, onDelete, issues }: OutlinerProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set([structure.rootItemId]));
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -91,12 +93,26 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
             selectedItemId={selectedItemId}
             onSelect={onSelect}
             onAddChild={onAddChild}
-            onDelete={onDelete}
+            onDelete={setPendingDeleteId}
             errorItemIds={errorItemIds}
             warningItemIds={warningItemIds}
           />
         </DndContext>
       </div>
+      {pendingDeleteId && structure.items[pendingDeleteId] && (
+        <ConfirmDialog
+          title="Poista nimike"
+          message={`Poistetaanko "${structure.items[pendingDeleteId].name}" ja kaikki sen alanimikkeet?`}
+          confirmLabel="Poista"
+          danger
+          onCancel={() => setPendingDeleteId(null)}
+          onConfirm={() => {
+            const id = pendingDeleteId;
+            setPendingDeleteId(null);
+            onDelete(id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -196,9 +212,7 @@ function OutlinerNode({
             <button
               type="button"
               className="rounded px-1 text-xs text-red-600 hover:bg-red-100"
-              onClick={() => {
-                if (window.confirm(`Poistetaanko "${item.name}" ja kaikki sen alanimikkeet?`)) onDelete(itemId);
-              }}
+              onClick={() => onDelete(itemId)}
               title="Poista"
             >
               ✕

@@ -18,11 +18,14 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const [typeChangeError, setTypeChangeError] = useState<string | null>(null);
+
   const handleTypeChange = (type: ItemType) => {
     if (type === "single" && item.children.length > 0) {
-      window.alert("Kokoonpanoa, jolla on lapsinimikkeitä, ei voi muuttaa yksittäiseksi nimikkeeksi.");
+      setTypeChangeError("Kokoonpanoa, jolla on lapsinimikkeitä, ei voi muuttaa yksittäiseksi nimikkeeksi.");
       return;
     }
+    setTypeChangeError(null);
     onChange({ type, pricingMode: type === "assembly" ? item.pricingMode ?? "sumOfChildren" : undefined });
   };
 
@@ -84,6 +87,7 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
             <option value="single">Yksittäinen nimike</option>
             <option value="assembly">Kokoonpano</option>
           </select>
+          {typeChangeError && <p className="mt-0.5 text-xs text-red-600">{typeChangeError}</p>}
         </div>
       </div>
 
