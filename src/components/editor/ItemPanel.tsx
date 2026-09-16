@@ -126,24 +126,47 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
           </div>
         </div>
         <div>
-          <label className="mb-0.5 block text-xs text-slate-500">Kuva</label>
+          <label className="mb-0.5 block text-xs text-slate-500">Kuvan URL</label>
           <input
-            type="file"
-            accept="image/*"
-            disabled={!isFirebaseConfigured || uploading}
-            className="w-full text-xs"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleImageUpload(file);
-            }}
+            type="text"
+            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+            placeholder="https://..."
+            value={item.imageUrl ?? ""}
+            onChange={(e) => onChange({ imageUrl: e.target.value || undefined })}
           />
-          {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
-          {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-          {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
+          <p className="mt-0.5 text-xs text-slate-400">
+            Käy myös suoraan liitettynä linkkinä, esim. Google Drivestä (muunna jaettu tiedosto muotoon
+            drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
+          </p>
         </div>
       </div>
+
+      <div>
+        <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
+        <input
+          type="file"
+          accept="image/*"
+          disabled={!isFirebaseConfigured || uploading}
+          className="w-full text-xs"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImageUpload(file);
+          }}
+        />
+        {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
+        {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+        {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
+      </div>
+
       {item.imageUrl && (
-        <img src={item.imageUrl} alt={item.name} className="h-24 w-24 rounded border border-slate-300 object-cover" />
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          className="h-24 w-24 rounded border border-slate-300 object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
       )}
 
       <div>
