@@ -33,7 +33,7 @@ export function ItemPicker({ structure, value, onChange, excludeItemIds = [], pl
     <div className="relative">
       <input
         type="text"
-        className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+        className="w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
         placeholder={placeholder ?? "Hae nimikettä nimellä tai koodilla..."}
         value={open ? query : selectedItem?.name ?? query}
         onFocus={() => {
@@ -44,13 +44,13 @@ export function ItemPicker({ structure, value, onChange, excludeItemIds = [], pl
         onBlur={() => window.setTimeout(() => setOpen(false), 150)}
       />
       {open && (
-        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded border border-slate-300 bg-white shadow-lg">
-          {results.length === 0 && <li className="px-2 py-1 text-sm text-slate-400">Ei tuloksia</li>}
+        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-[14px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
+          {results.length === 0 && <li className="px-2 py-1.5 text-sm text-[var(--ink-3)]">Ei tuloksia</li>}
           {results.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
-                className="block w-full px-2 py-1 text-left text-sm hover:bg-sky-100"
+                className="block w-full px-2 py-1.5 text-left text-sm text-[var(--ink)] transition hover:bg-[var(--accent-soft)]"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   onChange(item.id);
@@ -59,7 +59,7 @@ export function ItemPicker({ structure, value, onChange, excludeItemIds = [], pl
                 }}
               >
                 {item.name}
-                {item.code ? <span className="ml-1 text-slate-400">({item.code})</span> : null}
+                {item.code ? <span className="ml-1 font-mono text-xs text-[var(--ink-3)]">({item.code})</span> : null}
               </button>
             </li>
           ))}

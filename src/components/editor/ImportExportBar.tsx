@@ -34,14 +34,14 @@ export function ImportExportBar({ structure, onImported }: ImportExportBarProps)
     <div className="flex items-center gap-2">
       <button
         type="button"
-        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+        className="rounded-lg border border-[var(--line-2)] px-2 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:bg-[var(--panel-2)]"
         onClick={() => exportToWorkbook(structure)}
       >
         ⬇ Vie Exceliin
       </button>
       <button
         type="button"
-        className="rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+        className="rounded-lg border border-[var(--line-2)] px-2 py-1.5 text-xs font-medium text-[var(--ink)] transition hover:bg-[var(--panel-2)] disabled:opacity-50"
         disabled={importing}
         onClick={() => fileInputRef.current?.click()}
       >
@@ -59,16 +59,17 @@ export function ImportExportBar({ structure, onImported }: ImportExportBarProps)
       />
 
       {errors && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded bg-white p-4 shadow-xl">
-            <h3 className="mb-2 text-sm font-semibold text-red-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-auto rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
+            <h3 className="mb-2 text-sm font-semibold text-[var(--warn)]">
               Tuonti epäonnistui ({errors.length} virhettä). Rakennetta ei muutettu.
             </h3>
             <ul className="flex flex-col gap-1 text-sm">
               {errors.map((err, idx) => (
-                <li key={idx} className="rounded bg-red-50 px-2 py-1">
-                  <span className="font-mono text-xs text-slate-500">
-                    [{err.sheet}{err.row ? `, rivi ${err.row}` : ""}]
+                <li key={idx} className="rounded-lg bg-[var(--warn-soft)] px-2 py-1.5 text-[var(--ink)]">
+                  <span className="font-mono text-xs text-[var(--ink-3)]">
+                    [{err.sheet}
+                    {err.row ? `, rivi ${err.row}` : ""}]
                   </span>{" "}
                   {err.message}
                 </li>
@@ -76,7 +77,7 @@ export function ImportExportBar({ structure, onImported }: ImportExportBarProps)
             </ul>
             <button
               type="button"
-              className="mt-3 rounded bg-slate-700 px-3 py-1 text-sm text-white hover:bg-slate-800"
+              className="mt-3 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--on-accent)] transition hover:opacity-90"
               onClick={() => setErrors(null)}
             >
               Sulje

@@ -9,6 +9,7 @@ import { isFirebaseConfigured } from "../firebase/config";
 import * as store from "../firebase/structures";
 import type { ProductStructure } from "../types";
 import { ConfirmDialog, PromptDialog } from "./Dialogs";
+import { AppControls } from "./AppControls";
 
 interface StructureListProps {
   onOpen: (structure: ProductStructure) => void;
@@ -98,78 +99,94 @@ export function StructureList({ onOpen }: StructureListProps) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl p-6">
-      <h1 className="mb-1 text-2xl font-bold">Tuoterakenteet</h1>
-      <p className="mb-4 text-sm text-slate-500">
-        Mallinna hierarkkisia tuoterakenteita ja simuloi myyntikonfiguraattorin toimintaa niiden pohjalta.
-      </p>
-
-      {!isFirebaseConfigured && (
-        <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          Firebase ei ole konfiguroitu (.env puuttuu tai on vaillinainen). Tallennus Firestoreen ei ole käytössä -
-          voit silti kokeilla työkalua avaamalla sen ilman tallennusta. Katso README.md.
+    <div className="mx-auto max-w-3xl">
+      <header
+        className="mx-[18px] mt-[18px] flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]"
+      >
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl font-semibold tracking-tight text-[var(--ink)]">Tuoterakenteet</h1>
+          <p className="text-sm text-[var(--ink-2)]">
+            Mallinna hierarkkisia tuoterakenteita ja simuloi myyntikonfiguraattorin toimintaa niiden pohjalta.
+          </p>
         </div>
-      )}
-      {error && <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        <AppControls />
+      </header>
 
-      <div className="mb-6 flex gap-2">
-        <button
-          type="button"
-          className="rounded bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700"
-          onClick={() => setPending({ type: "create", template: createEmptyStructure("Uusi tuoterakenne") })}
-        >
-          + Uusi tyhjä rakenne
-        </button>
-        <button
-          type="button"
-          className="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-          onClick={() => setPending({ type: "create", template: buildSampleStructure() })}
-        >
-          + Uusi esimerkkidatalla
-        </button>
-      </div>
-
-      {loading && <p className="text-sm text-slate-400">Ladataan...</p>}
-
-      <ul className="flex flex-col gap-2">
-        {structures.map((s) => (
-          <li key={s.id} className="flex items-center gap-3 rounded border border-slate-200 bg-white px-3 py-2">
-            <div className="min-w-0 flex-1">
-              <p className="truncate font-medium">{s.name}</p>
-              <p className="text-xs text-slate-400">
-                {s.itemCount} nimikettä{s.updatedAt ? ` · päivitetty ${new Date(s.updatedAt).toLocaleString("fi-FI")}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={busyId === s.id}
-              className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
-              onClick={() => handleOpen(s.id)}
-            >
-              Avaa
-            </button>
-            <button
-              type="button"
-              disabled={busyId === s.id}
-              className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-              onClick={() => setPending({ type: "duplicate", id: s.id, currentName: s.name })}
-            >
-              Tallenna nimellä
-            </button>
-            <button
-              type="button"
-              disabled={busyId === s.id}
-              className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 disabled:opacity-50"
-              onClick={() => setPending({ type: "delete", id: s.id, name: s.name })}
-            >
-              Poista
-            </button>
-          </li>
-        ))}
-        {!loading && isFirebaseConfigured && structures.length === 0 && (
-          <p className="text-sm text-slate-400">Ei tallennettuja rakenteita vielä.</p>
+      <div className="m-[18px] flex flex-col gap-[18px]">
+        {!isFirebaseConfigured && (
+          <div className="rounded-[14px] border border-[var(--accent-line)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--ink)]">
+            Firebase ei ole konfiguroitu (.env puuttuu tai on vaillinainen). Tallennus Firestoreen ei ole käytössä -
+            voit silti kokeilla työkalua avaamalla sen ilman tallennusta. Katso README.md.
+          </div>
         )}
-      </ul>
+        {error && (
+          <div className="rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] p-3 text-sm text-[var(--ink)]">{error}</div>
+        )}
+
+        <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-[18px] shadow-[var(--shadow)]">
+          <div className="mb-5 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:opacity-90"
+              onClick={() => setPending({ type: "create", template: createEmptyStructure("Uusi tuoterakenne") })}
+            >
+              + Uusi tyhjä rakenne
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-[var(--line-2)] px-3 py-2 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--panel-2)]"
+              onClick={() => setPending({ type: "create", template: buildSampleStructure() })}
+            >
+              + Uusi esimerkkidatalla
+            </button>
+          </div>
+
+          {loading && <p className="text-sm text-[var(--ink-3)]">Ladataan...</p>}
+
+          <ul className="flex flex-col gap-2">
+            {structures.map((s) => (
+              <li
+                key={s.id}
+                className="flex items-center gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-[var(--ink)]">{s.name}</p>
+                  <p className="font-mono text-xs text-[var(--ink-3)]">
+                    {s.itemCount} nimikettä{s.updatedAt ? ` · päivitetty ${new Date(s.updatedAt).toLocaleString("fi-FI")}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busyId === s.id}
+                  className="rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-medium text-[var(--on-accent)] transition hover:opacity-90 disabled:opacity-50"
+                  onClick={() => handleOpen(s.id)}
+                >
+                  Avaa
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === s.id}
+                  className="rounded-lg border border-[var(--line-2)] px-2 py-1 text-xs text-[var(--ink)] transition hover:bg-[var(--panel)] disabled:opacity-50"
+                  onClick={() => setPending({ type: "duplicate", id: s.id, currentName: s.name })}
+                >
+                  Tallenna nimellä
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === s.id}
+                  className="rounded-lg border border-[var(--warn)] px-2 py-1 text-xs text-[var(--warn)] transition hover:bg-[var(--warn-soft)] disabled:opacity-50"
+                  onClick={() => setPending({ type: "delete", id: s.id, name: s.name })}
+                >
+                  Poista
+                </button>
+              </li>
+            ))}
+            {!loading && isFirebaseConfigured && structures.length === 0 && (
+              <p className="text-sm text-[var(--ink-3)]">Ei tallennettuja rakenteita vielä.</p>
+            )}
+          </ul>
+        </div>
+      </div>
 
       {pending?.type === "create" && (
         <PromptDialog

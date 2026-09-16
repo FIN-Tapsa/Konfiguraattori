@@ -1,14 +1,14 @@
 import { useState } from "react";
 import type { ItemType } from "../../types";
 import type { ProductStructureController } from "../../state/useProductStructure";
+import { getParentId } from "../../domain/tree";
 import { Outliner } from "./Outliner";
 import { ItemPanel } from "./ItemPanel";
 import { GroupsEditor } from "./GroupsEditor";
 import { RulesEditor } from "./RulesEditor";
 import { ValidationPanel } from "./ValidationPanel";
 import { ImportExportBar } from "./ImportExportBar";
-
-type Tab = "item" | "groups" | "rules";
+import { AppControls } from "../AppControls";
 
 interface EditorViewProps {
   controller: ProductStructureController;
@@ -21,32 +21,65 @@ interface EditorViewProps {
 export function EditorView({ controller, onSave, saving, onBack, onEnterSimulation }: EditorViewProps) {
   const { structure, issues, isDirty } = controller;
   const [selectedItemId, setSelectedItemId] = useState<string>(structure.rootItemId);
-  const [tab, setTab] = useState<Tab>("item");
   const [addingParentId, setAddingParentId] = useState<string | null>(null);
+  const [showValidation, setShowValidation] = useState(false);
 
   const selectedItem = structure.items[selectedItemId] ?? structure.items[structure.rootItemId];
 
+  const breadcrumb: { id: string; name: string }[] = [];
+  {
+    let current: string | undefined = selectedItem.id;
+    const seen = new Set<string>();
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      const item = structure.items[current];
+      if (!item) break;
+      breadcrumb.unshift({ id: item.id, name: item.name || "(nimetön)" });
+      current = getParentId(structure, current);
+    }
+  }
+
+  const errorCount = issues.filter((i) => i.level === "error").length;
+
   const handleSelect = (itemId: string) => {
     setSelectedItemId(itemId);
-    setTab("item");
   };
 
+  const canHaveGroups = selectedItem.type === "assembly" || selectedItem.type === "category";
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-2">
-        <button type="button" className="text-sm text-slate-500 hover:text-slate-800" onClick={onBack}>
+    <div className="flex h-full flex-col overflow-hidden">
+      <header className="mx-[18px] mt-[18px] flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]">
+        <button
+          type="button"
+          className="shrink-0 text-sm text-[var(--ink-2)] transition hover:text-[var(--ink)]"
+          onClick={onBack}
+        >
           ← Rakenteet
         </button>
         <input
           type="text"
-          className="min-w-0 flex-1 rounded border border-transparent px-2 py-1 text-lg font-semibold hover:border-slate-300 focus:border-slate-300"
+          className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel-2)]"
           value={structure.name}
           onChange={(e) => controller.replaceStructure({ ...structure, name: e.target.value })}
         />
-        {isDirty && <span className="text-xs text-amber-600">Tallentamattomia muutoksia</span>}
+        {isDirty && <span className="shrink-0 text-xs text-[var(--warn)]">Tallentamattomia muutoksia</span>}
+        {issues.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowValidation((v) => !v)}
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+              errorCount > 0
+                ? "border-[var(--warn)] bg-[var(--warn-soft)] text-[var(--warn)]"
+                : "border-[var(--accent-line)] bg-[var(--accent-soft)] text-[var(--ink)]"
+            }`}
+          >
+            {issues.length} huomiota
+          </button>
+        )}
         <button
           type="button"
-          className="rounded bg-emerald-600 px-3 py-1 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-[var(--accent-soft)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:opacity-90 disabled:opacity-50"
           disabled={saving}
           onClick={onSave}
         >
@@ -54,16 +87,18 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
         </button>
         <button
           type="button"
-          className="rounded bg-sky-600 px-3 py-1 text-sm font-medium text-white hover:bg-sky-700"
+          className="shrink-0 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--on-accent)] transition hover:opacity-90"
           onClick={onEnterSimulation}
         >
           ▶ Simuloi
         </button>
         <ImportExportBar structure={structure} onImported={(s) => controller.replaceStructure({ ...s, id: structure.id })} />
+        <AppControls />
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-[280px_1fr_320px]">
-        <div className="min-h-0 overflow-hidden border-r border-slate-200 bg-white">
+      <div className="grid flex-1 grid-cols-[minmax(224px,288px)_minmax(0,1fr)_minmax(300px,336px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-[minmax(224px,288px)_minmax(0,1fr)]">
+
+        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
           <Outliner
             structure={structure}
             selectedItemId={selectedItemId}
@@ -78,46 +113,58 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           />
         </div>
 
-        <div className="min-h-0 overflow-auto bg-slate-50 p-4">
-          <div className="mb-3 flex gap-1 border-b border-slate-200">
-            <TabButton active={tab === "item"} onClick={() => setTab("item")}>
-              Nimike
-            </TabButton>
-            {(selectedItem.type === "assembly" || selectedItem.type === "category") && (
-              <TabButton active={tab === "groups"} onClick={() => setTab("groups")}>
-                Ryhmät
-              </TabButton>
-            )}
-            <TabButton active={tab === "rules"} onClick={() => setTab("rules")}>
-              Säännöt
-            </TabButton>
-          </div>
-
-          {tab === "item" && (
-            <ItemPanel
-              key={selectedItem.id}
-              item={selectedItem}
-              structureId={structure.id}
-              onChange={(changes) => controller.updateItem(selectedItem.id, changes)}
-            />
-          )}
-          {tab === "groups" && (selectedItem.type === "assembly" || selectedItem.type === "category") && (
-            <GroupsEditor
-              structure={structure}
-              parentItemId={selectedItem.id}
-              onAddGroup={controller.addGroup}
-              onUpdateGroup={controller.updateGroup}
-              onDeleteGroup={controller.deleteGroup}
-              onUpdateItemRequired={(itemId, required) => controller.updateItem(itemId, { required })}
-            />
-          )}
-          {tab === "rules" && (
-            <RulesEditor structure={structure} onAdd={controller.addRule} onUpdate={controller.updateRule} onDelete={controller.deleteRule} />
-          )}
+        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)]">
+          <nav className="mb-3 truncate font-mono text-xs text-[var(--ink-3)]">
+            {breadcrumb.map((crumb, idx) => (
+              <span key={crumb.id}>
+                {idx > 0 && <span className="mx-1">/</span>}
+                <button
+                  type="button"
+                  className="transition hover:text-[var(--ink)]"
+                  onClick={() => handleSelect(crumb.id)}
+                >
+                  {crumb.name}
+                </button>
+              </span>
+            ))}
+          </nav>
+          <ItemPanel
+            key={selectedItem.id}
+            item={selectedItem}
+            structureId={structure.id}
+            onChange={(changes) => controller.updateItem(selectedItem.id, changes)}
+          />
         </div>
 
-        <div className="min-h-0 overflow-hidden border-l border-slate-200 bg-white">
-          <ValidationPanel issues={issues} onFocusItem={handleSelect} />
+        <div className="flex min-h-0 flex-col gap-[18px] max-[1100px]:col-span-full">
+          {showValidation && (
+            <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
+              <ValidationPanel issues={issues} onFocusItem={handleSelect} />
+            </div>
+          )}
+
+          {canHaveGroups && (
+            <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
+              <GroupsEditor
+                structure={structure}
+                parentItemId={selectedItem.id}
+                onAddGroup={controller.addGroup}
+                onUpdateGroup={controller.updateGroup}
+                onDeleteGroup={controller.deleteGroup}
+                onUpdateItemRequired={(itemId, required) => controller.updateItem(itemId, { required })}
+              />
+            </div>
+          )}
+
+          <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
+            <RulesEditor
+              structure={structure}
+              onAdd={controller.addRule}
+              onUpdate={controller.updateRule}
+              onDelete={controller.deleteRule}
+              focusItemId={selectedItem.id}
+            />
+          </div>
         </div>
       </div>
 
@@ -128,25 +175,10 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
             const id = controller.addItem(addingParentId, { name, type });
             setAddingParentId(null);
             setSelectedItemId(id);
-            setTab("item");
           }}
         />
       )}
     </div>
-  );
-}
-
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium ${
-        active ? "border-sky-600 text-sky-700" : "border-transparent text-slate-500 hover:text-slate-800"
-      }`}
-      onClick={onClick}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -161,20 +193,20 @@ function AddItemDialog({
   const [type, setType] = useState<ItemType>("single");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded bg-white p-4 shadow-xl">
-        <h3 className="mb-3 text-sm font-semibold text-slate-700">Uusi nimike</h3>
-        <label className="mb-0.5 block text-xs text-slate-500">Nimi</label>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
+        <h3 className="mb-3 text-sm font-semibold text-[var(--ink)]">Uusi nimike</h3>
+        <label className="mb-0.5 block text-xs text-[var(--ink-2)]">Nimi</label>
         <input
           type="text"
           autoFocus
-          className="mb-3 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          className="mb-3 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <label className="mb-0.5 block text-xs text-slate-500">Tyyppi</label>
+        <label className="mb-0.5 block text-xs text-[var(--ink-2)]">Tyyppi</label>
         <select
-          className="mb-4 w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          className="mb-4 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)]"
           value={type}
           onChange={(e) => setType(e.target.value as ItemType)}
         >
@@ -183,12 +215,12 @@ function AddItemDialog({
           <option value="category">Väliotsikko</option>
         </select>
         <div className="flex justify-end gap-2">
-          <button type="button" className="rounded px-3 py-1 text-sm text-slate-600 hover:bg-slate-100" onClick={onCancel}>
+          <button type="button" className="rounded-lg px-3 py-1.5 text-sm text-[var(--ink-2)] transition hover:bg-[var(--panel-2)]" onClick={onCancel}>
             Peruuta
           </button>
           <button
             type="button"
-            className="rounded bg-sky-600 px-3 py-1 text-sm text-white hover:bg-sky-700 disabled:opacity-50"
+            className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--on-accent)] transition hover:opacity-90 disabled:opacity-50"
             disabled={!name.trim()}
             onClick={() => onConfirm(name.trim(), type)}
           >

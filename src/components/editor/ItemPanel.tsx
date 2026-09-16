@@ -1,5 +1,5 @@
-// Edit panel for a single selected item: basic fields, pricing, image, and
-// generic attributes.
+// Edit panel for a single selected item: name/type header with an animated
+// image preview, pricing, image source, and generic attributes.
 
 import { useState } from "react";
 import type { Item, ItemType, PricingMode } from "../../types";
@@ -14,11 +14,21 @@ interface ItemPanelProps {
   onChange: (changes: Partial<Item>) => void;
 }
 
+const TYPE_LABELS: Record<ItemType, string> = {
+  single: "Yksittäinen nimike",
+  assembly: "Kokoonpano",
+  category: "Väliotsikko",
+};
+const PRICING_LABELS: Record<PricingMode, string> = {
+  sumOfChildren: "Lasten hintojen summa",
+  fixed: "Kiinteä hinta",
+};
+
 export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-
   const [typeChangeError, setTypeChangeError] = useState<string | null>(null);
+  const [imageExpanded, setImageExpanded] = useState(true);
 
   const handleTypeChange = (type: ItemType) => {
     if (type === "single" && item.children.length > 0) {
@@ -56,176 +66,185 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
   };
 
   const isCategory = item.type === "category";
+  const fieldClass =
+    "w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1.5 text-sm text-[var(--ink)] outline-none transition focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]";
+  const labelClass = "mb-0.5 block text-xs text-[var(--ink-2)]";
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className="mb-0.5 block text-xs text-slate-500">Nimi</label>
-        <input
-          type="text"
-          className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-          value={item.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-        />
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <input
+            type="text"
+            value={item.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            className="w-full rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-[21px] font-semibold text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel-2)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
+            placeholder="Nimikkeen nimi"
+          />
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1 font-mono text-xs text-[var(--ink-3)]">
+            <select
+              value={item.type}
+              onChange={(e) => handleTypeChange(e.target.value as ItemType)}
+              className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 py-0.5 text-[var(--ink-2)] outline-none"
+            >
+              {(Object.keys(TYPE_LABELS) as ItemType[]).map((t) => (
+                <option key={t} value={t}>
+                  {TYPE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            {item.type === "assembly" && (
+              <>
+                <span>·</span>
+                <select
+                  value={item.pricingMode ?? "sumOfChildren"}
+                  onChange={(e) => onChange({ pricingMode: e.target.value as PricingMode })}
+                  className="rounded-full border border-[var(--line)] bg-[var(--panel-2)] px-2 py-0.5 text-[var(--ink-2)] outline-none"
+                >
+                  {(Object.keys(PRICING_LABELS) as PricingMode[]).map((m) => (
+                    <option key={m} value={m}>
+                      {PRICING_LABELS[m]}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+          {typeChangeError && <p className="mt-1 px-1 text-xs text-[var(--warn)]">{typeChangeError}</p>}
+        </div>
+
+        {!isCategory && (
+          <AnimatedImage
+            imageUrl={item.imageUrl}
+            expanded={imageExpanded}
+            onToggle={() => setImageExpanded((v) => !v)}
+            code={item.code}
+          />
+        )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {!isCategory && (
+      {isCategory && (
+        <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-2)]">
+          Väliotsikolla ei ole hintaa, koodia, väriä tai kuvaa - se näkyy simuloinnissa aina, ilman omaa valintaa.
+          Sen omat lapset (oikean paneelin Ryhmät) toimivat normaalisti.
+        </p>
+      )}
+
+      {!isCategory && (
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-0.5 block text-xs text-slate-500">Nimikekoodi</label>
+            <label className={labelClass}>Nimikekoodi</label>
             <input
               type="text"
-              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+              className={`${fieldClass} font-mono`}
               value={item.code ?? ""}
               onChange={(e) => onChange({ code: e.target.value || undefined })}
             />
           </div>
-        )}
-        <div>
-          <label className="mb-0.5 block text-xs text-slate-500">Tyyppi</label>
-          <select
-            className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-            value={item.type}
-            onChange={(e) => handleTypeChange(e.target.value as ItemType)}
-          >
-            <option value="single">Yksittäinen nimike</option>
-            <option value="assembly">Kokoonpano</option>
-            <option value="category">Väliotsikko</option>
-          </select>
-          {typeChangeError && <p className="mt-0.5 text-xs text-red-600">{typeChangeError}</p>}
+          <div>
+            <label className={labelClass}>
+              Hinta {item.type === "assembly" && item.pricingMode === "sumOfChildren" ? "(summautuu lapsista)" : ""}
+            </label>
+            <input
+              type="number"
+              className={`${fieldClass} font-mono disabled:opacity-50`}
+              disabled={item.type === "assembly" && item.pricingMode === "sumOfChildren"}
+              value={item.price ?? ""}
+              onChange={(e) => onChange({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div>
-        <label className="mb-0.5 block text-xs text-slate-500">Kuvaus</label>
+        <label className={labelClass}>Kuvaus</label>
         <textarea
-          className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+          className={fieldClass}
           rows={2}
           value={item.description ?? ""}
           onChange={(e) => onChange({ description: e.target.value || undefined })}
         />
       </div>
 
-      {isCategory && (
-        <p className="text-xs text-slate-400">
-          Väliotsikolla ei ole hintaa, koodia, väriä tai kuvaa - se näkyy simuloinnissa aina, ilman omaa valintaa.
-          Sen omat lapset (Ryhmät-välilehti) toimivat normaalisti.
-        </p>
-      )}
-
       {!isCategory && (
         <>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-0.5 block text-xs text-slate-500">
-                Hinta {item.type === "assembly" && item.pricingMode === "sumOfChildren" ? "(ei käytössä, summautuu lapsista)" : ""}
-              </label>
-              <input
-                type="number"
-                className="w-full rounded border border-slate-300 px-2 py-1 text-sm disabled:bg-slate-100"
-                disabled={item.type === "assembly" && item.pricingMode === "sumOfChildren"}
-                value={item.price ?? ""}
-                onChange={(e) => onChange({ price: e.target.value === "" ? undefined : Number(e.target.value) })}
-              />
-            </div>
-            {item.type === "assembly" && (
-              <div>
-                <label className="mb-0.5 block text-xs text-slate-500">Hinnoittelutapa</label>
-                <select
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                  value={item.pricingMode ?? "sumOfChildren"}
-                  onChange={(e) => onChange({ pricingMode: e.target.value as PricingMode })}
-                >
-                  <option value="sumOfChildren">Lasten hintojen summa</option>
-                  <option value="fixed">Kiinteä hinta</option>
-                </select>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-0.5 block text-xs text-slate-500">Väri</label>
+              <label className={labelClass}>Väri</label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
-                  className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                  className={fieldClass}
                   placeholder="#dc2626 tai punainen"
                   value={item.color ?? ""}
                   onChange={(e) => onChange({ color: e.target.value || undefined })}
                 />
                 {item.color && (
-                  <span className="h-6 w-6 shrink-0 rounded border border-slate-300" style={{ backgroundColor: item.color }} />
+                  <span
+                    className="h-7 w-7 shrink-0 rounded-full border border-[var(--line)]"
+                    style={{ backgroundColor: item.color }}
+                  />
                 )}
               </div>
             </div>
             <div>
-              <label className="mb-0.5 block text-xs text-slate-500">Kuvan URL</label>
+              <label className={labelClass}>Kuvan URL</label>
               <input
                 type="text"
-                className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                className={fieldClass}
                 placeholder="https://..."
                 value={item.imageUrl ?? ""}
                 onChange={(e) => onChange({ imageUrl: e.target.value || undefined })}
               />
-              <p className="mt-0.5 text-xs text-slate-400">
-                Käy myös suoraan liitettynä linkkinä, esim. Google Drivestä (muunna jaettu tiedosto muotoon
-                drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
-              </p>
             </div>
           </div>
+          <p className="-mt-2 px-1 text-xs text-[var(--ink-3)]">
+            Käy myös suoraan liitettynä linkkinä, esim. Google Drivestä (muunna jaettu tiedosto muotoon
+            drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
+          </p>
 
-          <div>
+          <div className="rounded-[12px] bg-[var(--panel-2)] p-3">
             {isDriveConfigured ? (
               <>
-                <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Google Driveen</label>
+                <label className={labelClass}>...tai lataa tiedosto Google Driveen</label>
                 <input
                   type="file"
                   accept="image/*"
                   disabled={uploading}
-                  className="w-full text-xs"
+                  className="w-full text-xs text-[var(--ink-2)]"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleDriveUpload(file);
                   }}
                 />
-                <p className="mt-0.5 text-xs text-slate-400">
+                <p className="mt-0.5 text-xs text-[var(--ink-3)]">
                   Ensimmäisellä kerralla avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi.
                 </p>
               </>
             ) : (
               <>
-                <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
+                <label className={labelClass}>...tai lataa tiedosto Firebase Storageen</label>
                 <input
                   type="file"
                   accept="image/*"
                   disabled={!isFirebaseConfigured || uploading}
-                  className="w-full text-xs"
+                  className="w-full text-xs text-[var(--ink-2)]"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleFirebaseUpload(file);
                   }}
                 />
-                {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
+                {!isFirebaseConfigured && (
+                  <p className="text-xs text-[var(--warn)]">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>
+                )}
               </>
             )}
-            {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
-            {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+            {uploading && <p className="text-xs text-[var(--ink-3)]">Ladataan...</p>}
+            {uploadError && <p className="text-xs text-[var(--warn)]">{uploadError}</p>}
           </div>
 
-          {item.imageUrl && (
-            <img
-              src={item.imageUrl}
-              alt={item.name}
-              className="h-24 w-24 rounded border border-slate-300 object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          )}
-
           <div>
-            <h3 className="mb-1 text-sm font-semibold text-slate-700">Attribuutit</h3>
+            <h3 className="mb-1 text-sm font-semibold text-[var(--ink)]">Attribuutit</h3>
             <AttributesEditor
               attributes={item.attributes}
               overrides={item.overridesParentAttributes}
@@ -235,5 +254,42 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
         </>
       )}
     </div>
+  );
+}
+
+function AnimatedImage({
+  imageUrl,
+  expanded,
+  onToggle,
+  code,
+}: {
+  imageUrl?: string;
+  expanded: boolean;
+  onToggle: () => void;
+  code?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={expanded ? "Pienennä kuva" : "Suurenna kuva"}
+      className="image-placeholder shrink-0 overflow-hidden rounded-[14px] border border-[var(--line)] transition-[width,height] duration-[280ms] [transition-timing-function:cubic-bezier(.22,.8,.3,1)]"
+      style={expanded ? { width: "min(340px,100%)", height: 240 } : { width: 96, height: 96 }}
+    >
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center font-mono text-xs text-[var(--ink-3)]">
+          {code || "EI KUVAA"}
+        </span>
+      )}
+    </button>
   );
 }

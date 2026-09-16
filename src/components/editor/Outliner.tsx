@@ -1,6 +1,7 @@
 // Tree view (outliner) of the product structure: add/select items, and drag
 // items either onto another item (reparent as its child) or onto the thin
-// strip below an item (reorder/move as its next sibling).
+// strip below an item (reorder/move as its next sibling). Sibling items that
+// belong to the same SelectionGroup are visually framed together.
 
 import { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import type { ProductStructure, ValidationIssue } from "../../types";
 import { getParentId } from "../../domain/tree";
+import { getGroupsForParent } from "../../domain/groups";
 import { ConfirmDialog } from "../Dialogs";
 
 interface OutlinerProps {
@@ -49,7 +51,7 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
       const targetId = overId.slice("into-".length);
       if (targetId === activeId) return;
       const target = structure.items[targetId];
-      if (!target || target.type !== "assembly") return;
+      if (!target || (target.type !== "assembly" && target.type !== "category")) return;
       onReparent(activeId, targetId);
     } else if (overId.startsWith("after-")) {
       const targetId = overId.slice("after-".length);
@@ -70,13 +72,25 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
     }
   };
 
+  const nodeProps: Omit<NodeProps, "itemId" | "depth"> = {
+    structure,
+    expanded,
+    toggleExpanded,
+    selectedItemId,
+    onSelect,
+    onAddChild,
+    onDelete: setPendingDeleteId,
+    errorItemIds,
+    warningItemIds,
+  };
+
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
-        <h2 className="text-sm font-semibold text-slate-700">Nimikepuu</h2>
+      <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-2.5">
+        <h2 className="text-sm font-semibold text-[var(--ink)]">Nimikepuu</h2>
         <button
           type="button"
-          className="rounded bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700"
+          className="rounded-lg bg-[var(--accent)] px-2 py-1 text-xs font-medium text-[var(--on-accent)] transition hover:opacity-90"
           onClick={() => onAddChild(structure.rootItemId)}
         >
           + Uusi juuren alle
@@ -84,19 +98,7 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
       </div>
       <div className="flex-1 overflow-auto p-2">
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <OutlinerNode
-            structure={structure}
-            itemId={structure.rootItemId}
-            depth={0}
-            expanded={expanded}
-            toggleExpanded={toggleExpanded}
-            selectedItemId={selectedItemId}
-            onSelect={onSelect}
-            onAddChild={onAddChild}
-            onDelete={setPendingDeleteId}
-            errorItemIds={errorItemIds}
-            warningItemIds={warningItemIds}
-          />
+          <OutlinerNode itemId={structure.rootItemId} depth={0} {...nodeProps} />
         </DndContext>
       </div>
       {pendingDeleteId && structure.items[pendingDeleteId] && (
@@ -131,19 +133,9 @@ interface NodeProps {
   warningItemIds: Set<string>;
 }
 
-function OutlinerNode({
-  structure,
-  itemId,
-  depth,
-  expanded,
-  toggleExpanded,
-  selectedItemId,
-  onSelect,
-  onAddChild,
-  onDelete,
-  errorItemIds,
-  warningItemIds,
-}: NodeProps) {
+function OutlinerNode(props: NodeProps) {
+  const { structure, itemId, depth, expanded, toggleExpanded, selectedItemId, onSelect, onAddChild, onDelete, errorItemIds, warningItemIds } =
+    props;
   const item = structure.items[itemId];
   const isRoot = itemId === structure.rootItemId;
 
@@ -157,25 +149,32 @@ function OutlinerNode({
   if (!item) return null;
   const isExpanded = expanded.has(itemId);
   const hasChildren = item.children.length > 0;
-
   const isSelected = selectedItemId === itemId;
   const hasError = errorItemIds.has(itemId);
   const hasWarning = warningItemIds.has(itemId);
+  const isRequired = item.required === true;
+
+  const iconClasses =
+    item.type === "assembly"
+      ? "border border-[var(--accent-line)] bg-[var(--accent-soft)]"
+      : item.type === "category"
+        ? ""
+        : "border border-dashed border-[var(--line-2)]";
 
   return (
     <div>
       <div
         ref={droppableInto.setNodeRef}
-        style={{ paddingLeft: depth * 16, opacity: draggable.isDragging ? 0.4 : 1 }}
+        style={{ paddingLeft: depth * 16, opacity: draggable.isDragging ? 0.4 : 1, minHeight: 22 }}
         className={[
-          "group flex items-center gap-1 rounded px-1 py-0.5 text-sm",
-          isSelected ? "bg-sky-100" : "hover:bg-slate-100",
-          droppableInto.isOver ? "outline outline-2 outline-sky-500" : "",
+          "group flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-sm transition-colors",
+          isSelected ? "bg-[var(--accent)] text-[var(--on-accent)]" : "text-[var(--ink)] hover:bg-[var(--panel-2)]",
+          droppableInto.isOver ? "outline outline-2 outline-[var(--accent)]" : "",
         ].join(" ")}
       >
         <button
           type="button"
-          className="w-4 shrink-0 text-slate-400"
+          className={`w-3.5 shrink-0 text-xs ${isSelected ? "text-[var(--on-accent)]" : "text-[var(--ink-3)]"}`}
           onClick={() => toggleExpanded(itemId)}
           aria-label={isExpanded ? "Sulje" : "Avaa"}
         >
@@ -185,23 +184,56 @@ function OutlinerNode({
           ref={draggable.setNodeRef}
           {...draggable.listeners}
           {...draggable.attributes}
-          className={`flex cursor-grab select-none items-center gap-1 ${item.type !== "single" ? "font-medium" : ""} ${item.type === "category" ? "italic text-slate-500" : ""}`}
+          className={`flex min-w-0 flex-1 cursor-grab select-none items-center gap-1.5 ${item.type !== "single" ? "font-semibold" : ""} ${
+            item.type === "category" ? "italic opacity-80" : ""
+          }`}
           onClick={() => onSelect(itemId)}
         >
           {item.imageUrl ? (
-            <img src={item.imageUrl} alt="" className="h-4 w-4 shrink-0 rounded-sm object-cover" />
+            <img src={item.imageUrl} alt="" className="h-4 w-4 shrink-0 rounded-full object-cover" />
+          ) : item.color ? (
+            <span
+              className="h-3 w-3 shrink-0 rounded-full border border-black/10"
+              style={{ backgroundColor: item.color }}
+              aria-hidden="true"
+            />
           ) : (
-            <span className="shrink-0">{item.type === "assembly" ? "📦" : item.type === "category" ? "📁" : "▫️"}</span>
+            <span
+              className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full text-[9px] leading-none ${iconClasses}`}
+              aria-hidden="true"
+            >
+              {item.type === "category" ? "📁" : ""}
+            </span>
           )}
-          {item.name || "(nimetön)"}
+          <span className="truncate">{item.name || "(nimetön)"}</span>
         </span>
-        {hasError && <span className="text-red-600" title="Virhe">⚠</span>}
-        {!hasError && hasWarning && <span className="text-amber-500" title="Huomio">⚠</span>}
-        <span className="ml-auto hidden gap-1 group-hover:flex">
+        {isRequired && (
+          <span
+            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+              isSelected ? "bg-black/10 text-[var(--on-accent)]" : "bg-[var(--warn-soft)] text-[var(--warn)]"
+            }`}
+          >
+            pakollinen
+          </span>
+        )}
+        {hasError && <span className={isSelected ? "text-[var(--on-accent)]" : "text-[var(--warn)]"} title="Virhe">⚠</span>}
+        {!hasError && hasWarning && (
+          <span className={isSelected ? "text-[var(--on-accent)]" : "text-[var(--warn)]"} title="Huomio">
+            ⚠
+          </span>
+        )}
+        {item.price ? (
+          <span className={`shrink-0 font-mono text-xs ${isSelected ? "text-[var(--on-accent)]" : "text-[var(--ink-3)]"}`}>
+            {item.price.toLocaleString("fi-FI")} €
+          </span>
+        ) : null}
+        <span className="hidden shrink-0 gap-1 group-hover:flex">
           {(item.type === "assembly" || item.type === "category") && (
             <button
               type="button"
-              className="rounded px-1 text-xs text-sky-700 hover:bg-sky-200"
+              className={`rounded px-1 text-xs transition ${
+                isSelected ? "hover:bg-black/10" : "text-[var(--accent-line)] hover:bg-[var(--accent-soft)]"
+              }`}
               onClick={() => onAddChild(itemId)}
               title="Lisää lapsinimike"
             >
@@ -211,7 +243,7 @@ function OutlinerNode({
           {!isRoot && (
             <button
               type="button"
-              className="rounded px-1 text-xs text-red-600 hover:bg-red-100"
+              className={`rounded px-1 text-xs transition ${isSelected ? "hover:bg-black/10" : "text-[var(--warn)] hover:bg-[var(--warn-soft)]"}`}
               onClick={() => onDelete(itemId)}
               title="Poista"
             >
@@ -223,25 +255,43 @@ function OutlinerNode({
       <div
         ref={droppableAfter.setNodeRef}
         style={{ marginLeft: depth * 16 + 16 }}
-        className={`h-1 rounded ${droppableAfter.isOver ? "bg-sky-500" : ""}`}
+        className={`h-1 rounded ${droppableAfter.isOver ? "bg-[var(--accent)]" : ""}`}
       />
-      {isExpanded &&
-        item.children.map((childId) => (
-          <OutlinerNode
-            key={childId}
-            structure={structure}
-            itemId={childId}
-            depth={depth + 1}
-            expanded={expanded}
-            toggleExpanded={toggleExpanded}
-            selectedItemId={selectedItemId}
-            onSelect={onSelect}
-            onAddChild={onAddChild}
-            onDelete={onDelete}
-            errorItemIds={errorItemIds}
-            warningItemIds={warningItemIds}
-          />
-        ))}
+      {isExpanded && hasChildren && <OutlinerChildren {...props} parentId={itemId} depth={depth + 1} />}
     </div>
+  );
+}
+
+// Renders a parent's children grouped by SelectionGroup: explicit groups get
+// a bordered frame (highlighted when they contain the selected item),
+// ungrouped/implicit-singleton children render as plain rows.
+function OutlinerChildren(props: Omit<NodeProps, "itemId"> & { parentId: string }) {
+  const { structure, parentId, depth, selectedItemId } = props;
+  const groups = getGroupsForParent(structure, parentId);
+
+  return (
+    <>
+      {groups.map((group) => {
+        if (group.implicit) {
+          const memberId = group.memberItemIds[0];
+          return <OutlinerNode key={memberId} {...props} itemId={memberId} />;
+        }
+        const isActiveGroup = group.memberItemIds.includes(selectedItemId ?? "");
+        return (
+          <div
+            key={group.id}
+            style={{ marginLeft: depth * 16 - 8 }}
+            className={`my-1 rounded-r-lg border-l-2 py-1 pl-1.5 ${
+              isActiveGroup ? "border-[var(--accent-line)] bg-[var(--accent-soft)]" : "border-[var(--line-2)]"
+            }`}
+          >
+            <p className="mb-0.5 px-1 font-mono text-[10px] uppercase tracking-wide text-[var(--ink-3)]">{group.name}</p>
+            {group.memberItemIds.map((memberId) => (
+              <OutlinerNode key={memberId} {...props} itemId={memberId} depth={0} />
+            ))}
+          </div>
+        );
+      })}
+    </>
   );
 }

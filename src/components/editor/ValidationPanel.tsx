@@ -10,38 +10,30 @@ export function ValidationPanel({ issues, onFocusItem }: ValidationPanelProps) {
   const warnings = issues.filter((i) => i.level === "warning");
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="border-b border-slate-200 px-3 py-2">
-        <h2 className="text-sm font-semibold text-slate-700">
+    <div className="flex flex-col">
+      <div className="border-b border-[var(--line)] px-4 py-3">
+        <h2 className="text-sm font-semibold text-[var(--ink)]">
           Validointi{" "}
           {issues.length === 0 ? (
-            <span className="text-emerald-600">✓ Ei huomautuksia</span>
+            <span className="font-normal text-[var(--accent-line)]">✓ Ei huomautuksia</span>
           ) : (
-            <span className="text-slate-500">
+            <span className="font-normal text-[var(--ink-3)]">
               ({errors.length} virhettä, {warnings.length} huomiota)
             </span>
           )}
         </h2>
       </div>
-      <ul className="flex-1 overflow-auto p-2 text-sm">
+      <ul className="flex flex-col gap-1 p-3 text-sm">
         {errors.map((issue, idx) => (
-          <li key={`e${idx}`} className="mb-1 rounded bg-red-50 px-2 py-1 text-red-700">
-            <button
-              type="button"
-              className="text-left"
-              onClick={() => issue.itemId && onFocusItem?.(issue.itemId)}
-            >
+          <li key={`e${idx}`} className="rounded-lg bg-[var(--warn-soft)] px-2 py-1.5 text-[var(--warn)]">
+            <button type="button" className="text-left" onClick={() => issue.itemId && onFocusItem?.(issue.itemId)}>
               ⛔ {issue.message}
             </button>
           </li>
         ))}
         {warnings.map((issue, idx) => (
-          <li key={`w${idx}`} className="mb-1 rounded bg-amber-50 px-2 py-1 text-amber-700">
-            <button
-              type="button"
-              className="text-left"
-              onClick={() => issue.itemId && onFocusItem?.(issue.itemId)}
-            >
+          <li key={`w${idx}`} className="rounded-lg bg-[var(--accent-soft)] px-2 py-1.5 text-[var(--ink)]">
+            <button type="button" className="text-left" onClick={() => issue.itemId && onFocusItem?.(issue.itemId)}>
               ⚠ {issue.message}
             </button>
           </li>

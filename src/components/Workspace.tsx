@@ -40,7 +40,9 @@ export function Workspace({ initial, onBackToList }: WorkspaceProps) {
   return (
     <div className="flex h-full flex-col">
       {saveError && (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-1 text-sm text-red-700">{saveError}</div>
+        <div className="mx-[18px] mt-[18px] rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] px-4 py-2 text-sm text-[var(--warn)]">
+          {saveError}
+        </div>
       )}
       {mode === "editor" ? (
         <EditorView

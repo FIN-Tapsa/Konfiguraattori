@@ -42,14 +42,17 @@ export function PasswordGate({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-slate-100">
-      <form onSubmit={handleSubmit} className="w-full max-w-xs rounded border border-slate-300 bg-white p-6 shadow-sm">
-        <h1 className="mb-1 text-lg font-semibold text-slate-800">Tuoterakennekonfiguraattori</h1>
-        <p className="mb-4 text-sm text-slate-500">Sivu on suojattu salasanalla.</p>
+    <div className="flex h-screen w-screen items-center justify-center p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-xs rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-6 shadow-[var(--shadow)]"
+      >
+        <h1 className="mb-1 text-lg font-semibold text-[var(--ink)]">Tuoterakennekonfiguraattori</h1>
+        <p className="mb-4 text-sm text-[var(--ink-2)]">Sivu on suojattu salasanalla.</p>
         <input
           type="password"
           autoFocus
-          className="mb-2 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+          className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2 text-sm text-[var(--ink)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]"
           placeholder="Salasana"
           value={input}
           onChange={(e) => {
@@ -57,8 +60,11 @@ export function PasswordGate({ children }: { children: ReactNode }) {
             setError(false);
           }}
         />
-        {error && <p className="mb-2 text-sm text-red-600">Väärä salasana.</p>}
-        <button type="submit" className="w-full rounded bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-700">
+        {error && <p className="mb-2 text-sm text-[var(--warn)]">Väärä salasana.</p>}
+        <button
+          type="submit"
+          className="w-full rounded-lg bg-[var(--accent)] px-3 py-2 text-sm font-medium text-[var(--on-accent)] transition hover:opacity-90"
+        >
           Kirjaudu
         </button>
       </form>

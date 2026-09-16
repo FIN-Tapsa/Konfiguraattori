@@ -1,5 +1,7 @@
 // Recursively renders the selection controls for one active assembly's
-// children, and (for any selected assembly child) its own nested controls.
+// children as a card grid, and (for any selected assembly child) its own
+// nested controls. Category children render as a plain heading with their
+// own children shown right below - see domain/simulation.ts activateCategories.
 
 import type { ProductStructure } from "../../types";
 import { getGroupStatuses } from "../../domain/simulation";
@@ -17,63 +19,90 @@ interface SimulationNodeProps {
 export function SimulationNode({ structure, parentItemId, selected, effects, onToggle, depth }: SimulationNodeProps) {
   const groupStatuses = getGroupStatuses(structure, selected, parentItemId);
   const parent = structure.items[parentItemId];
-  // Categories are never a selectable choice - they auto-activate (see
-  // domain/simulation.ts) and are rendered here as a plain heading whose own
-  // children are shown right below it, exactly like any other active parent.
   const categoryChildIds = parent?.children.filter((id) => structure.items[id]?.type === "category") ?? [];
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 16 : 0 }} className="flex flex-col gap-3">
+    <div style={{ marginLeft: depth > 0 ? 16 : 0 }} className="flex flex-col gap-4">
       {groupStatuses.map(({ group, controlType, selectedCount, satisfied }) => (
-        <fieldset key={group.id} className="rounded border border-slate-200 p-3">
-          <legend className="flex items-center gap-2 px-1 text-sm font-medium text-slate-700">
+        <fieldset key={group.id} className="rounded-[14px] border border-[var(--line)] p-3">
+          <legend className="flex flex-wrap items-center gap-2 px-1 text-sm font-medium text-[var(--ink)]">
             {group.implicit ? null : group.name}
-            {group.min > 0 && <span className="text-xs font-normal text-red-600">pakollinen</span>}
+            {group.min > 0 && (
+              <span className="rounded-full bg-[var(--warn-soft)] px-2 py-0.5 text-[10px] font-medium text-[var(--warn)]">
+                pakollinen
+              </span>
+            )}
             {!satisfied && (
-              <span className="text-xs font-normal text-amber-600">
-                (valitse {group.max === null ? `vähintään ${group.min}` : group.min === group.max ? `${group.min} kpl` : `${group.min}-${group.max} kpl`}, nyt {selectedCount})
+              <span className="font-mono text-xs font-normal text-[var(--ink-3)]">
+                valitse {group.max === null ? `vähintään ${group.min}` : group.min === group.max ? `${group.min} kpl` : `${group.min}-${group.max} kpl`}, nyt {selectedCount}
               </span>
             )}
           </legend>
-          <div className="flex flex-col gap-1">
+          <div className="grid gap-[11px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))" }}>
             {group.memberItemIds.map((memberId) => {
               const item = structure.items[memberId];
               if (!item) return null;
               const isSelected = selected.has(memberId);
               const isLocked = effects.locked.has(memberId);
               const isDisabled = effects.disabledExcluded.has(memberId);
-              // Capacity only blocks picking MORE items once a multi-select group (max > 1)
-              // is full. A max=1 checkbox group instead allows clicking a new option to
-              // switch the selection (toggleSelection deselects the previous one for us).
               const atCapacity =
                 !isSelected && group.max !== null && group.max > 1 && selectedCount >= group.max && controlType === "checkbox";
+              const inactive = isDisabled || isLocked || atCapacity;
 
               return (
-                <div key={memberId}>
-                  <label
-                    className={`flex items-center gap-2 rounded px-1 py-0.5 text-sm ${
-                      isDisabled ? "text-slate-400" : "cursor-pointer hover:bg-slate-50"
-                    }`}
+                <div key={memberId} className="flex flex-col">
+                  <button
+                    type="button"
+                    disabled={inactive}
+                    onClick={() => onToggle(memberId)}
+                    className={[
+                      "flex flex-col overflow-hidden rounded-[14px] border text-left transition",
+                      isSelected
+                        ? "border-[var(--accent)] shadow-[0_0_0_3px_var(--accent-soft)]"
+                        : "border-[var(--line)] hover:border-[var(--line-2)]",
+                      isDisabled ? "cursor-not-allowed opacity-55" : inactive ? "cursor-default" : "cursor-pointer",
+                    ].join(" ")}
                   >
-                    <input
-                      type={controlType}
-                      name={group.id}
-                      checked={isSelected}
-                      disabled={isDisabled || isLocked || atCapacity}
-                      onChange={() => onToggle(memberId)}
-                    />
-                    <span>{item.name}</span>
-                    {item.price ? <span className="text-xs text-slate-400">+{item.price.toLocaleString("fi-FI")} €</span> : null}
-                    {isLocked && <span className="text-xs text-sky-600">🔒 pakotettu</span>}
-                  </label>
+                    <div className="image-placeholder relative flex h-24 w-full items-center justify-center">
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="font-mono text-[10px] text-[var(--ink-3)]">{item.code || "EI KUVAA"}</span>
+                      )}
+                      <span
+                        className={`absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-xs transition ${
+                          isSelected
+                            ? "bg-[var(--accent)] text-[var(--on-accent)]"
+                            : "border border-[var(--line-2)] bg-[var(--panel)] text-transparent"
+                        }`}
+                      >
+                        ✓
+                      </span>
+                      {isLocked && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-[var(--panel)]/90 px-1.5 py-0.5 text-[10px] text-[var(--ink-2)]">
+                          🔒
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 px-2.5 py-2">
+                      <span className="min-w-0 truncate text-sm text-[var(--ink)]">{item.name}</span>
+                      {item.price ? (
+                        <span className="shrink-0 font-mono text-xs text-[var(--ink-3)]">+{item.price.toLocaleString("fi-FI")} €</span>
+                      ) : null}
+                    </div>
+                  </button>
                   {isDisabled && (
-                    <p className="ml-6 text-xs text-red-500">{effects.disabledExcluded.get(memberId)?.join(", ")}</p>
+                    <p className="mt-1 px-1 text-xs text-[var(--warn)]">
+                      Ei yhdistettävissä: {effects.disabledExcluded.get(memberId)?.join(", ")}
+                    </p>
                   )}
                   {isLocked && !isDisabled && (
-                    <p className="ml-6 text-xs text-sky-500">{effects.locked.get(memberId)?.join(", ")}</p>
+                    <p className="mt-1 px-1 text-xs text-[var(--ink-3)]">
+                      Pakollinen valinnan kanssa: {effects.locked.get(memberId)?.join(", ")}
+                    </p>
                   )}
                   {isSelected && item.type === "assembly" && (
-                    <div className="mt-2 border-l-2 border-slate-100 pl-3">
+                    <div className="mt-2">
                       <SimulationNode
                         structure={structure}
                         parentItemId={memberId}
@@ -95,7 +124,7 @@ export function SimulationNode({ structure, parentItemId, selected, effects, onT
         if (!category || !selected.has(categoryId)) return null;
         return (
           <div key={categoryId}>
-            <h4 className="mb-2 border-b border-slate-300 pb-1 text-sm font-semibold text-slate-600">{category.name}</h4>
+            <h4 className="mb-2 border-b border-[var(--line-2)] pb-1 text-sm font-semibold text-[var(--ink-2)]">{category.name}</h4>
             <SimulationNode
               structure={structure}
               parentItemId={categoryId}
