@@ -6,6 +6,7 @@ import type { Item, ItemType, PricingMode } from "../../types";
 import { AttributesEditor } from "./AttributesEditor";
 import { uploadItemImage } from "../../firebase/storage";
 import { isFirebaseConfigured } from "../../firebase/config";
+import { isDriveConfigured, uploadImageToDrive } from "../../google/drive";
 
 interface ItemPanelProps {
   item: Item;
@@ -25,7 +26,20 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
     onChange({ type, pricingMode: type === "assembly" ? item.pricingMode ?? "sumOfChildren" : undefined });
   };
 
-  const handleImageUpload = async (file: File) => {
+  const handleDriveUpload = async (file: File) => {
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const url = await uploadImageToDrive(file);
+      onChange({ imageUrl: url });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "Kuvan lataus Google Driveen epäonnistui.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFirebaseUpload = async (file: File) => {
     setUploading(true);
     setUploadError(null);
     try {
@@ -142,20 +156,41 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
       </div>
 
       <div>
-        <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
-        <input
-          type="file"
-          accept="image/*"
-          disabled={!isFirebaseConfigured || uploading}
-          className="w-full text-xs"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImageUpload(file);
-          }}
-        />
+        {isDriveConfigured ? (
+          <>
+            <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Google Driveen</label>
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploading}
+              className="w-full text-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleDriveUpload(file);
+              }}
+            />
+            <p className="mt-0.5 text-xs text-slate-400">
+              Ensimmäisellä kerralla avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi.
+            </p>
+          </>
+        ) : (
+          <>
+            <label className="mb-0.5 block text-xs text-slate-500">...tai lataa tiedosto Firebase Storageen</label>
+            <input
+              type="file"
+              accept="image/*"
+              disabled={!isFirebaseConfigured || uploading}
+              className="w-full text-xs"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleFirebaseUpload(file);
+              }}
+            />
+            {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
+          </>
+        )}
         {uploading && <p className="text-xs text-slate-400">Ladataan...</p>}
         {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
-        {!isFirebaseConfigured && <p className="text-xs text-amber-600">Firebase ei konfiguroitu, kuvan lataus ei käytössä.</p>}
       </div>
 
       {item.imageUrl && (

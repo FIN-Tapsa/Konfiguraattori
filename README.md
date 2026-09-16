@@ -19,6 +19,7 @@ Kaikki esimerkkidata (mm. "Kuvitteellinen kuorma-auto") on täysin kuvitteellist
 - [Käyttötilat](#käyttötilat)
 - [Excel-tuonti/-vienti](#excel-tuontivienti)
 - [Firebase-projektin pystytys](#firebase-projektin-pystytys)
+- [Google Drive kuvien tallennukseen](#google-drive-kuvien-tallennukseen-vaihtoehto-firebase-storagelle)
 - [Kehitys](#kehitys)
 - [Build ja julkaisu GitHub Pagesiin](#build-ja-julkaisu-github-pagesiin)
 - [Kansiorakenne](#kansiorakenne)
@@ -181,6 +182,54 @@ näytetään listana eikä rikkinäistä/osittaista puuta koskaan tuoda.
    ei-arkaluontoiseen käyttöön. Katso rules-tiedostojen kommentit ja
    [laajennuskohta Firebase Authille](#tunnetut-rajoitukset-ja-laajennuskohdat)
    ennen kuin jaat sovelluksen linkin tai Firebase-projektin kenellekään muulle.
+
+## Google Drive kuvien tallennukseen (vaihtoehto Firebase Storagelle)
+
+Lokakuun 2024 jälkeen luoduilla uusilla Firebase-projekteilla Cloud Storage
+vaatii Blaze-laskutustilauksen (luottokortin) jo pelkkään käyttöönottoon.
+Jos et halua liittää korttia, nimikkeiden kuvat voi sen sijaan ladata suoraan
+käyttäjän omaan Google Drive -kansioon (`src/google/drive.ts`) - sovellus
+pyytää selaimessa kertaalleen OAuth-luvan kirjoittaa vain sen tiedostoja
+mitä se itse luo (`drive.file`-scope, ei pääsyä muuhun Driveesi).
+
+**Kertaluontoinen pystytys Google Cloud Consolissa** (voit käyttää samaa
+projektia kuin Firebase - Firebase-projekti ON Google Cloud -projekti):
+
+1. Mene [console.cloud.google.com](https://console.cloud.google.com/) ja
+   valitse sama projekti jonka loit Firebaselle (esim. `konfiguraattori-9236a`).
+2. **APIs & Services -> Library** -> hae "Google Drive API" -> **Enable**.
+3. **APIs & Services -> OAuth consent screen**:
+   - User type: **External**, Publishing status: **Testing** (ei vaadi
+     Googlen erillistä katselmointia näin pienelle henkilökohtaiselle käytölle).
+   - Lisää oma Google-tilisi **Test users** -listalle.
+4. **APIs & Services -> Credentials -> Create Credentials -> OAuth client ID**:
+   - Application type: **Web application**.
+   - **Authorized JavaScript origins**: lisää sekä tuotanto-osoitteesi
+     (esim. `https://fin-tapsa.github.io`) että paikallinen kehitysosoite
+     (esim. `http://localhost:5183` - portti riippuu millä ajat `npm run dev`).
+   - Luo. Kopioi näkyviin tuleva **Client ID**.
+5. Luo Google Driveessä kansio kuville, jaa se ("Kuka tahansa jolla on
+   linkki"), ja poimi sen **kansion ID** osoitteesta
+   (`drive.google.com/drive/folders/`**`TÄMÄ_OSA`**`?usp=sharing`).
+6. Täytä `.env`-tiedostoosi ja GitHub Secretseihin:
+   ```
+   VITE_GOOGLE_DRIVE_CLIENT_ID=<Client ID vaiheesta 4>
+   VITE_GOOGLE_DRIVE_FOLDER_ID=<kansion ID vaiheesta 5>
+   ```
+
+Kun molemmat on asetettu, nimikkeen muokkauspaneelin "Kuva"-kohta näyttää
+"lataa tiedosto Google Driveen" -vaihtoehdon Firebase Storage -vaihtoehdon
+sijaan. Ensimmäisellä latauksella avautuu Googlen kirjautumis-/lupaikkuna.
+
+**Huomioita:**
+- Testing-tilan OAuth-luvat vanhenevat n. 7 päivän välein (Googlen rajoitus) -
+  silloin kirjautumisikkuna avautuu vain uudelleen, ei vaadi mitään muuta.
+- Kertyneen käyttöoikeuden access-token elää n. tunnin, minkä jälkeen
+  seuraava lataus pyytää kirjautumisen uudelleen automaattisesti.
+- Tämä on henkilökohtaiseen käyttöön tarkoitettu kevyt ratkaisu, ei
+  tuotantotason integraatio - Googlen dokumentoimaton
+  `drive.google.com/thumbnail?id=...`-kuvaosoitemuoto voi periaatteessa
+  muuttua tulevaisuudessa.
 
 ## Kehitys
 
