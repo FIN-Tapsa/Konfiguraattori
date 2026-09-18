@@ -6,9 +6,12 @@
 import { useState } from "react";
 import {
   DndContext,
+  PointerSensor,
   closestCenter,
   useDraggable,
   useDroppable,
+  useSensor,
+  useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import type { ProductStructure, ValidationIssue } from "../../types";
@@ -29,6 +32,11 @@ interface OutlinerProps {
 export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAddChild, onDelete, issues }: OutlinerProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set([structure.rootItemId]));
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  // Without an activation distance, dnd-kit starts a "drag" on every
+  // pointerdown (even with zero movement) and then swallows the click that
+  // would normally follow - so plain clicks on tree rows never reach
+  // onSelect. Require a few pixels of movement before a drag counts.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -97,7 +105,7 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
         </button>
       </div>
       <div className="flex-1 overflow-auto p-2">
-        <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <OutlinerNode itemId={structure.rootItemId} depth={0} {...nodeProps} />
         </DndContext>
       </div>
@@ -262,36 +270,60 @@ function OutlinerNode(props: NodeProps) {
   );
 }
 
-// Renders a parent's children grouped by SelectionGroup: explicit groups get
-// a bordered frame (highlighted when they contain the selected item),
+// Renders a parent's children in their actual order: category items (which
+// getGroupsForParent excludes, since they're never a selectable choice) as
+// plain rows, and the rest grouped by SelectionGroup - explicit groups get a
+// bordered frame (highlighted when they contain the selected item),
 // ungrouped/implicit-singleton children render as plain rows.
 function OutlinerChildren(props: Omit<NodeProps, "itemId"> & { parentId: string }) {
   const { structure, parentId, depth, selectedItemId } = props;
-  const groups = getGroupsForParent(structure, parentId);
+  const parent = structure.items[parentId];
+  if (!parent) return null;
 
-  return (
-    <>
-      {groups.map((group) => {
-        if (group.implicit) {
-          const memberId = group.memberItemIds[0];
-          return <OutlinerNode key={memberId} {...props} itemId={memberId} />;
-        }
-        const isActiveGroup = group.memberItemIds.includes(selectedItemId ?? "");
-        return (
-          <div
-            key={group.id}
-            style={{ marginLeft: depth * 16 - 8 }}
-            className={`my-1 rounded-r-lg border-l-2 py-1 pl-1.5 ${
-              isActiveGroup ? "border-[var(--accent-line)] bg-[var(--accent-soft)]" : "border-[var(--line-2)]"
-            }`}
-          >
-            <p className="mb-0.5 px-1 font-mono text-[10px] uppercase tracking-wide text-[var(--ink-3)]">{group.name}</p>
-            {group.memberItemIds.map((memberId) => (
-              <OutlinerNode key={memberId} {...props} itemId={memberId} depth={0} />
-            ))}
-          </div>
-        );
-      })}
-    </>
-  );
+  const groupByMemberId = new Map<string, ReturnType<typeof getGroupsForParent>[number]>();
+  for (const group of getGroupsForParent(structure, parentId)) {
+    for (const memberId of group.memberItemIds) groupByMemberId.set(memberId, group);
+  }
+
+  const rendered = new Set<string>();
+  const rows: React.ReactNode[] = [];
+
+  for (const childId of parent.children) {
+    if (rendered.has(childId)) continue;
+    const child = structure.items[childId];
+    if (!child) continue;
+
+    if (child.type === "category") {
+      rendered.add(childId);
+      rows.push(<OutlinerNode key={childId} {...props} itemId={childId} />);
+      continue;
+    }
+
+    const group = groupByMemberId.get(childId);
+    if (!group) continue;
+    group.memberItemIds.forEach((m) => rendered.add(m));
+
+    if (group.implicit) {
+      rows.push(<OutlinerNode key={childId} {...props} itemId={childId} />);
+      continue;
+    }
+
+    const isActiveGroup = group.memberItemIds.includes(selectedItemId ?? "");
+    rows.push(
+      <div
+        key={group.id}
+        style={{ marginLeft: depth * 16 - 8 }}
+        className={`my-1 rounded-r-lg border-l-2 py-1 pl-1.5 ${
+          isActiveGroup ? "border-[var(--accent-line)] bg-[var(--accent-soft)]" : "border-[var(--line-2)]"
+        }`}
+      >
+        <p className="mb-0.5 px-1 font-mono text-[10px] uppercase tracking-wide text-[var(--ink-3)]">{group.name}</p>
+        {group.memberItemIds.map((memberId) => (
+          <OutlinerNode key={memberId} {...props} itemId={memberId} depth={0} />
+        ))}
+      </div>
+    );
+  }
+
+  return <>{rows}</>;
 }
