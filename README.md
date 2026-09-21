@@ -29,6 +29,11 @@ Kaikki esimerkkidata (mm. "Kuvitteellinen kuorma-auto") on täysin kuvitteellist
 - **Tailwind CSS v4** (design-tokenit `src/index.css`:ssä, vaalea/tumma teema)
 - **Firebase Firestore** tuoterakenteiden tallennukseen (yksi dokumentti per
   rakenne, kokoelmassa `structures`)
+  - Data luetaan ja kirjoitetaan Firestoren **REST-rajapinnalla** (`fetch`,
+    `src/firebase/structures.ts`), ei Firebase-SDK:n reaaliaikaisella
+    WebChannel-yhteydellä: se katkesi joillain yhteyksillä virheeseen
+    `Unknown SID` (HTTP 400), jolloin lista jäi tilaan "Ladataan..." ja
+    tallennus jäi kesken. Pääsyä rajaavat edelleen `firestore.rules`.
 - **Firebase Storage** nimikkeiden kuville/ikoneille
 - **xlsx (SheetJS)** Excel-tuontiin/-vientiin
 - **@dnd-kit** nimikepuun raahaukseen (reparenting/järjestäminen)
