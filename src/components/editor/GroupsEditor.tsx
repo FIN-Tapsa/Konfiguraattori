@@ -13,6 +13,7 @@ interface GroupsEditorProps {
   onUpdateGroup: (groupId: string, changes: Partial<SelectionGroup>) => void;
   onDeleteGroup: (groupId: string) => void;
   onUpdateItemRequired: (itemId: string, required: boolean) => void;
+  onUpdateItemDefault: (itemId: string, defaultSelected: boolean) => void;
 }
 
 export function GroupsEditor({
@@ -22,6 +23,7 @@ export function GroupsEditor({
   onUpdateGroup,
   onDeleteGroup,
   onUpdateItemRequired,
+  onUpdateItemDefault,
 }: GroupsEditorProps) {
   const parent = structure.items[parentItemId];
   if (!parent) return null;
@@ -97,7 +99,15 @@ export function GroupsEditor({
                 key={memberId}
                 className="flex items-center justify-between rounded-md bg-[var(--panel)] px-2 py-1 text-sm text-[var(--ink)]"
               >
-                <span className="truncate">{structure.items[memberId]?.name ?? memberId}</span>
+                <span className="min-w-0 flex-1 truncate">{structure.items[memberId]?.name ?? memberId}</span>
+                <label className="mr-2 flex shrink-0 items-center gap-1 text-xs text-[var(--ink-2)]" title="Esivalittu simuloinnissa, mutta käyttäjä voi vaihtaa">
+                  <input
+                    type="checkbox"
+                    checked={structure.items[memberId]?.defaultSelected ?? false}
+                    onChange={(e) => onUpdateItemDefault(memberId, e.target.checked)}
+                  />
+                  Oletus
+                </label>
                 <button
                   type="button"
                   className="shrink-0 text-xs text-[var(--ink-3)] transition hover:text-[var(--warn)]"
@@ -132,6 +142,14 @@ export function GroupsEditor({
                     onChange={(e) => onUpdateItemRequired(childId, e.target.checked)}
                   />
                   Pakollinen
+                </label>
+                <label className="flex shrink-0 items-center gap-1 text-xs text-[var(--ink-2)]" title="Esivalittu simuloinnissa, mutta käyttäjä voi vaihtaa">
+                  <input
+                    type="checkbox"
+                    checked={child.defaultSelected ?? false}
+                    onChange={(e) => onUpdateItemDefault(childId, e.target.checked)}
+                  />
+                  Oletus
                 </label>
                 {groups.length > 0 && (
                   <select

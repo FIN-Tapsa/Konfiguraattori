@@ -1,17 +1,29 @@
 // Edit panel for a single selected item: name/type header with an animated
 // image preview, pricing, image source, and generic attributes.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Item, ItemType, PricingMode } from "../../types";
 import { AttributesEditor } from "./AttributesEditor";
 import { uploadItemImage } from "../../firebase/storage";
 import { isFirebaseConfigured } from "../../firebase/config";
-import { isDriveConfigured, uploadImageToDrive } from "../../google/drive";
+import {
+  DriveError,
+  connectDrive,
+  hasDriveToken,
+  isDriveConfigured,
+  preloadDriveScript,
+  uploadImageToDrive,
+} from "../../google/drive";
 
 interface ItemPanelProps {
   item: Item;
   structureId: string;
+  isRoot: boolean;
+  attributeDefaults: Record<string, string>;
+  attributeKeys: string[];
+  onSetAttributeDefault: (key: string, value: string) => void;
   onChange: (changes: Partial<Item>) => void;
+  onDefaultChange: (defaultSelected: boolean) => void;
 }
 
 const TYPE_LABELS: Record<ItemType, string> = {
@@ -24,9 +36,19 @@ const PRICING_LABELS: Record<PricingMode, string> = {
   fixed: "Kiinteä hinta",
 };
 
-export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
+export function ItemPanel({
+  item,
+  structureId,
+  isRoot,
+  attributeDefaults,
+  attributeKeys,
+  onSetAttributeDefault,
+  onChange,
+  onDefaultChange,
+}: ItemPanelProps) {
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<{ message: string; hints: string[] } | null>(null);
+  const [driveConnected, setDriveConnected] = useState(hasDriveToken);
   const [typeChangeError, setTypeChangeError] = useState<string | null>(null);
   const [imageExpanded, setImageExpanded] = useState(true);
 
@@ -39,6 +61,24 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
     onChange({ type, pricingMode: type === "assembly" ? item.pricingMode ?? "sumOfChildren" : undefined });
   };
 
+  useEffect(() => {
+    if (isDriveConfigured) preloadDriveScript();
+  }, []);
+
+  const toUploadError = (e: unknown, fallback: string) =>
+    e instanceof DriveError
+      ? { message: e.message, hints: e.hints }
+      : { message: e instanceof Error ? e.message : fallback, hints: [] };
+
+  // Must stay synchronous up to connectDrive(): the popup needs the click's user activation.
+  const handleDriveConnect = () => {
+    setUploadError(null);
+    connectDrive().then(
+      () => setDriveConnected(true),
+      (e) => setUploadError(toUploadError(e, "Google-kirjautuminen epäonnistui.")),
+    );
+  };
+
   const handleDriveUpload = async (file: File) => {
     setUploading(true);
     setUploadError(null);
@@ -46,7 +86,8 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
       const url = await uploadImageToDrive(file);
       onChange({ imageUrl: url });
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Kuvan lataus Google Driveen epäonnistui.");
+      setUploadError(toUploadError(e, "Kuvan lataus Google Driveen epäonnistui."));
+      setDriveConnected(hasDriveToken());
     } finally {
       setUploading(false);
     }
@@ -59,7 +100,7 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
       const url = await uploadItemImage(structureId, item.id, file);
       onChange({ imageUrl: url });
     } catch (e) {
-      setUploadError(e instanceof Error ? e.message : "Kuvan lataus epäonnistui.");
+      setUploadError(toUploadError(e, "Kuvan lataus epäonnistui."));
     } finally {
       setUploading(false);
     }
@@ -126,7 +167,8 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
       {isCategory && (
         <p className="rounded-lg border border-[var(--line)] bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-2)]">
           Väliotsikolla ei ole hintaa, koodia, väriä tai kuvaa - se näkyy simuloinnissa aina, ilman omaa valintaa.
-          Sen omat lapset (oikean paneelin Ryhmät) toimivat normaalisti.
+          Sen omat lapset (oikean paneelin Ryhmät) toimivat normaalisti. Väliotsikon alle voi lisätä myös
+          alaotsikoita: lisää lapsinimike (+) ja valitse tyypiksi Väliotsikko.
         </p>
       )}
 
@@ -165,6 +207,23 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
           onChange={(e) => onChange({ description: e.target.value || undefined })}
         />
       </div>
+
+      {!isCategory && !isRoot && (
+        <label className="flex items-start gap-2 text-sm text-[var(--ink)]">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={item.defaultSelected ?? false}
+            onChange={(e) => onDefaultChange(e.target.checked)}
+          />
+          <span>
+            Oletuksena valittuna simuloinnissa
+            <span className="block text-xs text-[var(--ink-3)]">
+              Esivalinta alussa ja nollattaessa. Käyttäjä voi vaihtaa tai poistaa valinnan.
+            </span>
+          </span>
+        </label>
+      )}
 
       {!isCategory && (
         <>
@@ -207,18 +266,31 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
             {isDriveConfigured ? (
               <>
                 <label className={labelClass}>...tai lataa tiedosto Google Driveen</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  disabled={uploading}
-                  className="w-full text-xs text-[var(--ink-2)]"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleDriveUpload(file);
-                  }}
-                />
+                {driveConnected ? (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploading}
+                    className="w-full text-xs text-[var(--ink-2)]"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleDriveUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleDriveConnect}
+                    className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-xs text-[var(--ink)] transition hover:border-[var(--accent)]"
+                  >
+                    Kirjaudu Google Driveen
+                  </button>
+                )}
                 <p className="mt-0.5 text-xs text-[var(--ink-3)]">
-                  Ensimmäisellä kerralla avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi.
+                  {driveConnected
+                    ? "Kirjautuminen voimassa (n. 1 h)."
+                    : "Avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi. Salli ponnahdusikkunat, jos selain estää sen."}
                 </p>
               </>
             ) : (
@@ -240,7 +312,18 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
               </>
             )}
             {uploading && <p className="text-xs text-[var(--ink-3)]">Ladataan...</p>}
-            {uploadError && <p className="text-xs text-[var(--warn)]">{uploadError}</p>}
+            {uploadError && (
+              <div className="mt-1 text-xs text-[var(--warn)]">
+                <p>{uploadError.message}</p>
+                {uploadError.hints.length > 0 && (
+                  <ul className="mt-0.5 list-disc pl-4">
+                    {uploadError.hints.map((h) => (
+                      <li key={h}>{h}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
@@ -248,6 +331,9 @@ export function ItemPanel({ item, structureId, onChange }: ItemPanelProps) {
             <AttributesEditor
               attributes={item.attributes}
               overrides={item.overridesParentAttributes}
+              defaults={attributeDefaults}
+              keySuggestions={attributeKeys}
+              onSetDefault={onSetAttributeDefault}
               onChange={(attributes, overridesParentAttributes) => onChange({ attributes, overridesParentAttributes })}
             />
           </div>

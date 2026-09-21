@@ -105,44 +105,52 @@ body {
 /* Animated blurred backdrop, see src/components/AnimatedBackground.tsx */
 @keyframes drift-a {
   from {
-    transform: translate(-4%, -3%) scale(1);
+    transform: translate(-8%, -6%) scale(1);
   }
   to {
-    transform: translate(4%, 5%) scale(1.08);
+    transform: translate(10%, 12%) scale(1.15);
   }
 }
 @keyframes drift-b {
   from {
-    transform: translate(3%, -4%) scale(1.05);
+    transform: translate(8%, -8%) scale(1.1);
   }
   to {
-    transform: translate(-5%, 4%) scale(0.96);
+    transform: translate(-12%, 10%) scale(0.92);
   }
 }
 @keyframes drift-c {
   from {
-    transform: translate(-3%, 4%) scale(0.98);
+    transform: translate(-8%, 10%) scale(0.95);
   }
   to {
-    transform: translate(5%, -3%) scale(1.06);
+    transform: translate(12%, -8%) scale(1.12);
   }
 }
 
 .bg-orb-a {
-  animation: drift-a 34s ease-in-out infinite alternate;
+  animation: drift-a 22s ease-in-out infinite alternate;
 }
 .bg-orb-b {
-  animation: drift-b 46s ease-in-out infinite alternate;
+  animation: drift-b 28s ease-in-out infinite alternate;
 }
 .bg-orb-c {
-  animation: drift-c 52s ease-in-out infinite alternate;
+  animation: drift-c 34s ease-in-out infinite alternate;
 }
 
+/* With "reduce motion" set in the OS the backdrop drifts much more slowly
+   instead of freezing (it used to be switched off entirely, which read as
+   "the background does not animate"). It can still be turned off with the
+   toggle in the header. */
 @media (prefers-reduced-motion: reduce) {
-  .bg-orb-a,
-  .bg-orb-b,
+  .bg-orb-a {
+    animation-duration: 45s;
+  }
+  .bg-orb-b {
+    animation-duration: 60s;
+  }
   .bg-orb-c {
-    animation: none;
+    animation-duration: 75s;
   }
 }
 

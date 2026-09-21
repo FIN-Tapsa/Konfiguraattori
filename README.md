@@ -7,10 +7,8 @@ mallintaminen ja prototyyppaus.
 
 Kaikki esimerkkidata (mm. "Kuvitteellinen kuorma-auto") on täysin kuvitteellista.
 
-> **Tila:** tämä on ensimmäinen kahdesta rakennusvaiheesta. Datamalli, logiikka
-> ja käyttöliittymä toimivat, mutta ulkoasu on tarkoituksella keskeneräinen
-> (oletus-Tailwind, ei viimeisteltyä designia). Visuaalinen hionta tehdään
-> seuraavassa vaiheessa.
+> **Tila:** datamalli, logiikka, käyttöliittymä ja visuaalinen ilme (design-tokenit,
+> tumma teema, leijuvat kortit) ovat käytössä.
 
 ## Sisällys
 
@@ -28,7 +26,7 @@ Kaikki esimerkkidata (mm. "Kuvitteellinen kuorma-auto") on täysin kuvitteellist
 ## Tekninen alusta
 
 - **React + TypeScript**, build-työkaluna **Vite**
-- **Tailwind CSS v4** (oletustyylit, ei erillistä designsysteemiä vielä)
+- **Tailwind CSS v4** (design-tokenit `src/index.css`:ssä, vaalea/tumma teema)
 - **Firebase Firestore** tuoterakenteiden tallennukseen (yksi dokumentti per
   rakenne, kokoelmassa `structures`)
 - **Firebase Storage** nimikkeiden kuville/ikoneille
@@ -62,6 +60,16 @@ attribuuttinimet tämä nimike nimenomaisesti ylikirjoittaa), `children`
   saavutettavissa ilman että käyttäjän tarvitsee valita otsikkoa erikseen.
   Sen omat lapset toimivat muuten täysin normaalisti (omat ryhmät, hinnat, jne).
 
+Väliotsikoita voi sisentää useammalle tasolle (väliotsikko toisen väliotsikon
+alla): valitse lapsinimikettä lisättäessä tyypiksi "Väliotsikko". Simuloinnissa
+alaotsikot näkyvät hierarkkisina, asteittain hillitympinä otsikkoina.
+
+Lisäksi nimikkeellä on kenttä `defaultSelected?: boolean` (oletusvalinta):
+nimike on esivalittuna kun simulointi alkaa tai nollataan, mutta käyttäjä voi
+vaihtaa tai poistaa valinnan. Oletus ei ohita ryhmän max-rajaa eikä sääntöjä
+(ristiriitainen oletus jää valitsematta), ja max=1-ryhmässä vain yksi jäsen
+voi olla oletus.
+
 Lisäksi mallissa on kenttä `required?: boolean`, joka määrittää onko
 nimike pakollinen silloin kun se **ei kuulu mihinkään valintaryhmään**
 (ks. alla) - tämä toteuttaa spec-vaatimuksen "nimike joka ei kuulu
@@ -81,6 +89,27 @@ käsitellä kaikkia lapsia yhtenäisesti.
 
 Puun rajat ylittävät riippuvuudet (`requires`/`excludes`), viittaavat
 nimikkeisiin `id`:n kautta. Toteutus: `src/domain/simulation.ts`.
+
+- `excludes` ("poissulkee"/"estää") toimii **aina molempiin suuntiin**: jos A
+  estää B:n, myös B estää A:n. Käänteissääntö johdetaan moottorissa
+  (`withMirroredExcludes`), joten dataan ei tallenneta kaksoisrivejä ja
+  vanhat säännöt toimivat heti. Saman max=1-ryhmän jäsenille peiliä ei
+  luoda, jotta ryhmän sisällä vaihtaminen ei jumiudu. `requires` on
+  yksisuuntainen.
+- Sääntöjä muokataan **sääntösivulla** (yläpalkin "Säännöt"-painike):
+  tyyppi, lähde, kohde ja selite ovat muokattavissa. Sivu suodattuu
+  editorissa valitun nimikkeen mukaan ("Näytä kaikki" poistaa suodatuksen).
+  Oikean paneelin Säännöt-osio näyttää vain valitun nimikkeen säännöt.
+
+### Globaalit attribuutit
+
+Attribuuttiavaimelle voi asettaa yhden oletusarvon koko rakenteeseen
+(`ProductStructure.attributeDefaults`, `src/domain/attributes.ts`):
+"Globaalit attribuutit" -paneelista tai nimikkeen attribuuttirivin
+"⇉ oletukseksi" -painikkeesta. Oletus täyttyy kaikkiin nimikkeisiin, joilla
+avain on käytössä ja arvo on tyhjä tai seuraa vanhaa oletusta; erikseen
+asetetut arvot säilyvät. Uusi attribuutti saa oletusarvon nimeä
+valittaessa, ja oletus on simuloinnin efektiivisten attribuuttien pohjataso.
 
 ### Simulointimoottori
 
@@ -107,21 +136,24 @@ uusi `Set` ulos):
   toisen alle (reparenting) tai sisarusten järjestykseen. Pudota nimikkeen
   **päälle** siirtääksesi sen sen lapseksi; pudota nimikkeen **alle** (ohut
   raita) siirtääksesi sen sen jälkeiseksi sisarukseksi.
-- **Nimike-välilehti**: perustiedot, hinnoittelu, väri, kuvan lataus
-  (Firebase Storage), dynaaminen attribuuttilista
+- **Nimike-välilehti**: perustiedot, hinnoittelu, väri, oletusvalinta, kuvan
+  lataus (Firebase Storage tai Google Drive), dynaaminen attribuuttilista
 - **Ryhmät-välilehti** (kokoonpanoille): jaa lapset valintaryhmiin,
   aseta min/max, merkitse ryhmittelemättömät lapset pakollisiksi/vapaiksi
-- **Säännöt-välilehti**: koko rakenteen `requires`/`excludes`-säännöt,
+- **Sääntösivu** (yläpalkin "Säännöt"): koko rakenteen `requires`/`excludes`-säännöt,
   hakupohjainen nimikevalitsin (koska sääntö voi viitata mihin tahansa
-  puun nimikkeeseen)
+  puun nimikkeeseen), muokkaus, suodatus nimikkeellä
 - **Validointipaneeli**: näkyvissä koko ajan oikealla, listaa virheet ja
   huomiot (esim. tyhjä ryhmä, poistettuun nimikkeeseen viittaava sääntö)
 - Excel-tuonti/-vienti-painikkeet ylätunnisteessa
 
 ### Simulointitila (esikatselu)
 
-Käynnistyy juuresta. Jokainen aktiivinen kokoonpano näyttää valintaryhmänsä
-kontrolleina (radio pakolliselle tasan-yhden-valinnalle, muuten checkbox).
+Käynnistyy juuresta, oletusvalinnat esivalittuina. Jokainen aktiivinen kokoonpano
+näyttää valintaryhmänsä kontrolleina (radio pakolliselle tasan-yhden-valinnalle,
+muuten checkbox). Samalla tasolla olevat rinnakkaiset ryhmät näytetään
+vierekkäin. Esitystilaa voi vaihtaa **Kortit / Puu** -kytkimestä (valinta
+muistetaan selaimessa): Puu on tiivis hierarkkinen lista samoilla valinnoilla.
 Säännöt vaikuttavat reaaliaikaisesti: pakotetut valinnat lukittu (🔒),
 poissuljetut disabloitu + syy näkyvissä. Yhteenvetopaneeli näyttää valitun
 rakenteen, kokonaishinnan ja efektiiviset attribuutit. "Nollaa simulaatio"
@@ -150,10 +182,15 @@ säilyttämiseksi vienti/tuonti-kierroksella):
 | `attributes` | `avain1=arvo1\|avain2=arvo2` (laajennus) |
 | `overrides_parent_attributes` | `avain1,avain2` (laajennus) |
 | `required` | `TRUE`/`FALSE`, koskee vain ryhmittelemättömiä lapsia (laajennus) |
+| `default_selected` | `TRUE`/`FALSE`, oletusvalinta simuloinnissa (laajennus) |
 | `group_id`, `group_name`, `group_min`, `group_max` | Valintaryhmä |
 
 **Säännöt**-sarakkeet: `rule_id`, `type` (`requires`/`excludes`),
 `source_item_id`, `target_item_id`, `note`.
+
+Valinnainen kolmas välilehti **Attribuutit** (`key`, `default_value`) sisältää
+globaalit attribuuttioletukset; se viedään vain jos oletuksia on, ja tuonti
+toimii myös ilman sitä.
 
 Tuonti validoi rivi riviltä: ei syklejä, kaikki `parent_id`- ja
 sääntöviittaukset osoittavat olemassa oleviin id:ihin, jokainen `group_id`
@@ -230,7 +267,25 @@ projektia kuin Firebase - Firebase-projekti ON Google Cloud -projekti):
 
 Kun molemmat on asetettu, nimikkeen muokkauspaneelin "Kuva"-kohta näyttää
 "lataa tiedosto Google Driveen" -vaihtoehdon Firebase Storage -vaihtoehdon
-sijaan. Ensimmäisellä latauksella avautuu Googlen kirjautumis-/lupaikkuna.
+sijaan. Paina ensin **Kirjaudu Google Driveen** (avaa Googlen
+kirjautumis-/lupaikkunan; sen täytyy alkaa suoraan napinpainalluksesta, muuten
+selain estää ikkunan), jonka jälkeen tiedoston valinta aktivoituu.
+
+**Vianetsintä** (virheilmoitus `popup_closed` tarkoittaa vain, että ikkuna
+sulkeutui ilman vastausta - syy selviää ikkunan sisällöstä):
+- Authorized JavaScript origins -listassa täsmälleen `https://fin-tapsa.github.io`
+  (ei polkua `/Konfiguraattori/`, ei loppukauttaviivaa). Virheilmoituksessa
+  näytetään sovelluksen nykyinen origin vertailua varten.
+- Consent screen Testing-tilassa: tilisi Test users -listalla.
+- Drive API otettu käyttöön samassa projektissa kuin OAuth client.
+- Client ID on itse luotu Web application -client, ei Firebasen automaattisesti
+  luoma "Web client (auto created by Google Service)".
+- Selain sallii ponnahdusikkunat; mainosesto/tietosuojalaajennus ei estä
+  accounts.google.com -yhteyttä.
+- `drive.file`-scope sallii kirjoituksen vain sovelluksen itse luomiin
+  kansioihin. Jos `VITE_GOOGLE_DRIVE_FOLDER_ID`-kansioon kirjoitus palauttaa
+  404, sovellus luo ja käyttää automaattisesti omaa kansiota
+  `Konfiguraattori-kuvat`.
 
 **Huomioita:**
 - Testing-tilan OAuth-luvat vanhenevat n. 7 päivän välein (Googlen rajoitus) -
@@ -332,5 +387,6 @@ src/
   esim. jos `requires`- ja `excludes`-säännöt ovat suoraan ristiriidassa
   saman nimikkeen kohdalla, tästä näytetään varoitus yhteenvetopaneelissa
   mutta moottori ei yritä arvata "oikeaa" ratkaisua.
-- Ulkoasu on tarkoituksella keskeneräinen (oletus-Tailwind) - visuaalinen
-  hionta tehdään erillisessä jatkovaiheessa.
+- Animoitu tausta liikkuu hitaammin, jos käyttöjärjestelmässä on "vähennä
+  liikettä" päällä (se ei pysähdy kokonaan); sen voi sammuttaa yläpalkin
+  painikkeesta.

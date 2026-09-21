@@ -5,12 +5,33 @@
 // The simulation never mutates the stored ProductStructure - it is a pure
 // walk over it driven by a `selected: Set<string>` of item ids.
 
-import type { Item, ProductStructure } from "../types";
+import type { ConditionalRule, Item, ProductStructure } from "../types";
 import { getParentId, subtreeIds } from "./tree";
-import { getGroupsForParent, type EffectiveGroup } from "./groups";
+import { getGroupForMember, getGroupsForParent, type EffectiveGroup } from "./groups";
 
+/**
+ * Root plus every item flagged `defaultSelected` that is reachable and allowed:
+ * defaults go through toggleSelection, so group max and rules are respected and
+ * a default that conflicts with them is simply skipped. Defaults under an
+ * unselected parent are applied once that parent becomes active.
+ */
 export function createInitialSelection(structure: ProductStructure): Set<string> {
-  return applyRules(structure, new Set([structure.rootItemId])).selected;
+  let selected = applyRules(structure, new Set([structure.rootItemId])).selected;
+  const attempted = new Set<string>();
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const parentId of [...selected]) {
+      for (const childId of structure.items[parentId]?.children ?? []) {
+        const child = structure.items[childId];
+        if (!child?.defaultSelected || child.type === "category" || attempted.has(childId)) continue;
+        attempted.add(childId);
+        progressed = true;
+        if (!selected.has(childId)) selected = toggleSelection(structure, selected, childId);
+      }
+    }
+  }
+  return selected;
 }
 
 function selectWithAncestors(structure: ProductStructure, selected: Set<string>, itemId: string): Set<string> {
@@ -63,11 +84,30 @@ export interface RuleEffects {
   conflicts: string[];
 }
 
+/**
+ * "excludes" is bidirectional: A excludes B implies B excludes A. The stored
+ * rule stays one row; the mirror is derived here so existing data works as-is.
+ * Exception: two members of the same max=1 group already exclude each other
+ * by the group itself, and a mirrored block would make it impossible to switch
+ * between them, so no mirror is created for them.
+ */
+export function withMirroredExcludes(structure: ProductStructure): ConditionalRule[] {
+  const result: ConditionalRule[] = [];
+  for (const rule of Object.values(structure.rules)) {
+    result.push(rule);
+    if (rule.type !== "excludes") continue;
+    const group = getGroupForMember(structure, rule.sourceItemId);
+    if (group && group.max === 1 && group.memberItemIds.includes(rule.targetItemId)) continue;
+    result.push({ ...rule, sourceItemId: rule.targetItemId, targetItemId: rule.sourceItemId });
+  }
+  return result;
+}
+
 function applyRules(structure: ProductStructure, selectedIn: Set<string>): { selected: Set<string>; effects: RuleEffects } {
   let selected = new Set(selectedIn);
   const locked = new Map<string, string[]>();
   const disabledExcluded = new Map<string, string[]>();
-  const rules = Object.values(structure.rules);
+  const rules = withMirroredExcludes(structure);
 
   let changed = true;
   let iterations = 0;
@@ -188,7 +228,7 @@ export function computeTotalPrice(structure: ProductStructure, selected: Set<str
 }
 
 export function computeEffectiveAttributes(structure: ProductStructure, selected: Set<string>): Record<string, string> {
-  const effective: Record<string, string> = {};
+  const effective: Record<string, string> = { ...structure.attributeDefaults };
   const visit = (itemId: string, isRoot: boolean) => {
     const item = structure.items[itemId];
     if (!item) return;

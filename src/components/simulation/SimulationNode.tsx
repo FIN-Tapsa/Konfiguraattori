@@ -14,17 +14,28 @@ interface SimulationNodeProps {
   effects: RuleEffects;
   onToggle: (itemId: string) => void;
   depth: number;
+  /** How many väliotsikko levels deep this node is (0 = directly under an assembly). */
+  headingLevel?: number;
 }
 
-export function SimulationNode({ structure, parentItemId, selected, effects, onToggle, depth }: SimulationNodeProps) {
+// Sub-headings get progressively quieter so nested väliotsikot read as a hierarchy.
+const HEADING_STYLES = [
+  "mb-2 border-b border-[var(--line-2)] pb-1 text-sm font-semibold text-[var(--ink-2)]",
+  "mb-2 text-[13px] font-semibold text-[var(--ink-2)]",
+  "mb-2 font-mono text-[11px] font-medium uppercase tracking-wide text-[var(--ink-3)]",
+];
+
+export function SimulationNode({ structure, parentItemId, selected, effects, onToggle, depth, headingLevel = 0 }: SimulationNodeProps) {
   const groupStatuses = getGroupStatuses(structure, selected, parentItemId);
   const parent = structure.items[parentItemId];
   const categoryChildIds = parent?.children.filter((id) => structure.items[id]?.type === "category") ?? [];
 
   return (
     <div style={{ marginLeft: depth > 0 ? 16 : 0 }} className="flex flex-col gap-4">
+      {/* Parallel groups at the same level sit side by side and wrap when there is no room. */}
+      <div className="flex flex-wrap items-start gap-4">
       {groupStatuses.map(({ group, controlType, selectedCount, satisfied }) => (
-        <fieldset key={group.id} className="rounded-[14px] border border-[var(--line)] p-3">
+        <fieldset key={group.id} className="min-w-0 flex-[1_1_440px] rounded-[14px] border border-[var(--line)] p-3">
           <legend className="flex flex-wrap items-center gap-2 px-1 text-sm font-medium text-[var(--ink)]">
             {group.implicit ? null : group.name}
             {group.min > 0 && (
@@ -119,12 +130,14 @@ export function SimulationNode({ structure, parentItemId, selected, effects, onT
           </div>
         </fieldset>
       ))}
+      </div>
       {categoryChildIds.map((categoryId) => {
         const category = structure.items[categoryId];
         if (!category || !selected.has(categoryId)) return null;
+        const Heading = `h${Math.min(headingLevel + 4, 6)}` as "h4" | "h5" | "h6";
         return (
-          <div key={categoryId}>
-            <h4 className="mb-2 border-b border-[var(--line-2)] pb-1 text-sm font-semibold text-[var(--ink-2)]">{category.name}</h4>
+          <div key={categoryId} className={headingLevel > 0 ? "border-l-2 border-[var(--line)] pl-3" : ""}>
+            <Heading className={HEADING_STYLES[Math.min(headingLevel, HEADING_STYLES.length - 1)]}>{category.name}</Heading>
             <SimulationNode
               structure={structure}
               parentItemId={categoryId}
@@ -132,6 +145,7 @@ export function SimulationNode({ structure, parentItemId, selected, effects, onT
               effects={effects}
               onToggle={onToggle}
               depth={depth}
+              headingLevel={headingLevel + 1}
             />
           </div>
         );

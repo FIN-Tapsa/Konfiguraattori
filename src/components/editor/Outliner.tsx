@@ -3,7 +3,7 @@
 // strip below an item (reorder/move as its next sibling). Sibling items that
 // belong to the same SelectionGroup are visually framed together.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -37,6 +37,23 @@ export function Outliner({ structure, selectedItemId, onSelect, onReparent, onAd
   // would normally follow - so plain clicks on tree rows never reach
   // onSelect. Require a few pixels of movement before a drag counts.
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  // Keep the selected item visible: expand every ancestor whenever selection
+  // changes (e.g. right after adding a child under a collapsed parent).
+  useEffect(() => {
+    if (!selectedItemId) return;
+    const ancestors: string[] = [];
+    const seen = new Set<string>();
+    let current = getParentId(structure, selectedItemId);
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      ancestors.push(current);
+      current = getParentId(structure, current);
+    }
+    setExpanded((prev) => (ancestors.every((a) => prev.has(a)) ? prev : new Set([...prev, ...ancestors])));
+    // Only on selection change: re-running on every structure edit would re-open nodes the user collapsed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedItemId]);
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => {
@@ -222,6 +239,16 @@ function OutlinerNode(props: NodeProps) {
             }`}
           >
             pakollinen
+          </span>
+        )}
+        {item.defaultSelected && (
+          <span
+            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+              isSelected ? "bg-black/10 text-[var(--on-accent)]" : "bg-[var(--accent-soft)] text-[var(--ink-2)]"
+            }`}
+            title="Oletuksena valittuna simuloinnissa"
+          >
+            oletus
           </span>
         )}
         {hasError && <span className={isSelected ? "text-[var(--on-accent)]" : "text-[var(--warn)]"} title="Virhe">⚠</span>}

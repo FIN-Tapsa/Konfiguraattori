@@ -1,6 +1,7 @@
 // Excel (.xlsx) import/export for a ProductStructure.
 //
-// Two sheets: "Nimikkeet" (items) and "Säännöt" (rules). The columns listed in
+// Two sheets: "Nimikkeet" (items) and "Säännöt" (rules), plus an optional
+// "Attribuutit" sheet (global attribute defaults). The columns listed in
 // the product spec are always read/written; a handful of extra columns
 // (code, attributes, overrides_parent_attributes, required) are included too
 // so a round-trip export -> import does not lose data the spec's core model
@@ -12,6 +13,7 @@ import type { AttributeEntry, ConditionalRule, Item, ProductStructure, Selection
 
 const ITEMS_SHEET = "Nimikkeet";
 const RULES_SHEET = "Säännöt";
+const ATTRIBUTES_SHEET = "Attribuutit";
 
 const ITEM_COLUMNS = [
   "id",
@@ -27,6 +29,7 @@ const ITEM_COLUMNS = [
   "attributes",
   "overrides_parent_attributes",
   "required",
+  "default_selected",
   "group_id",
   "group_name",
   "group_min",
@@ -111,6 +114,7 @@ export function exportToWorkbook(structure: ProductStructure): void {
       attributes: serializeAttributes(item.attributes),
       overrides_parent_attributes: item.overridesParentAttributes.join(","),
       required: item.required ? "TRUE" : "FALSE",
+      default_selected: item.defaultSelected ? "TRUE" : "FALSE",
       group_id: group?.id ?? "",
       group_name: group?.name ?? "",
       group_min: group ? group.min : "",
@@ -133,6 +137,13 @@ export function exportToWorkbook(structure: ProductStructure): void {
   const rulesSheet = XLSX.utils.json_to_sheet(ruleRows, { header: [...RULE_COLUMNS] });
   XLSX.utils.book_append_sheet(workbook, itemsSheet, ITEMS_SHEET);
   XLSX.utils.book_append_sheet(workbook, rulesSheet, RULES_SHEET);
+  const defaultRows = Object.entries(structure.attributeDefaults ?? {}).map(([key, defaultValue]) => ({
+    key,
+    default_value: defaultValue,
+  }));
+  if (defaultRows.length > 0) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(defaultRows, { header: ["key", "default_value"] }), ATTRIBUTES_SHEET);
+  }
 
   const safeName = structure.name.replace(/[^\p{L}\p{N}_-]+/gu, "_").slice(0, 60) || "tuoterakenne";
   XLSX.writeFile(workbook, `${safeName}.xlsx`);
@@ -229,6 +240,7 @@ export async function importFromFile(file: File, structureName: string): Promise
       overridesParentAttributes: parseList(row.overrides_parent_attributes),
       children: [],
       required: parseBool(row.required),
+      defaultSelected: parseBool(row.default_selected) || undefined,
     };
     items[id] = item;
     parentOf.set(id, rawParent || null);
@@ -369,6 +381,17 @@ export async function importFromFile(file: File, structureName: string): Promise
 
   if (errors.length > 0) return { success: false, errors };
 
+  // Optional sheet: older exports (and structures without defaults) simply lack it.
+  const attributeDefaults: Record<string, string> = {};
+  const attributesSheet = workbook.Sheets[ATTRIBUTES_SHEET];
+  if (attributesSheet) {
+    for (const row of XLSX.utils.sheet_to_json<Record<string, unknown>>(attributesSheet, { defval: "" })) {
+      const key = String(row.key ?? "").trim();
+      const value = String(row.default_value ?? "").trim();
+      if (key && value) attributeDefaults[key] = value;
+    }
+  }
+
   const structure: ProductStructure = {
     id: uuid(),
     name: structureName,
@@ -376,6 +399,7 @@ export async function importFromFile(file: File, structureName: string): Promise
     items,
     groups,
     rules,
+    ...(Object.keys(attributeDefaults).length > 0 ? { attributeDefaults } : {}),
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

@@ -1,7 +1,7 @@
 // Three large, slowly-drifting blurred colour fields behind the floating
-// cards. Purely decorative - respects prefers-reduced-motion (see the
-// .bg-orb-* animations in index.css) and can be switched off entirely via
-// the boolean `enabled` prop (see useBackgroundEnabled).
+// cards. Purely decorative - drifts more slowly under prefers-reduced-motion
+// (see the .bg-orb-* animations in index.css) and can be switched off entirely
+// via the boolean `enabled` prop (see useBackgroundEnabled).
 //
 // Opacity comes from the --orb-op-* CSS tokens (index.css) rather than a
 // Tailwind dark: variant, since those tokens already flip per-theme

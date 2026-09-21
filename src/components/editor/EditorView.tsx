@@ -2,10 +2,14 @@ import { useState } from "react";
 import type { ItemType } from "../../types";
 import type { ProductStructureController } from "../../state/useProductStructure";
 import { getParentId } from "../../domain/tree";
+import { getGroupForMember } from "../../domain/groups";
 import { Outliner } from "./Outliner";
 import { ItemPanel } from "./ItemPanel";
 import { GroupsEditor } from "./GroupsEditor";
-import { RulesEditor } from "./RulesEditor";
+import { RulesPage } from "./RulesPage";
+import { RulesSummary } from "./RulesSummary";
+import { GlobalAttributesPanel } from "./GlobalAttributesPanel";
+import { collectAttributeKeys } from "../../domain/attributes";
 import { ValidationPanel } from "./ValidationPanel";
 import { ImportExportBar } from "./ImportExportBar";
 import { AppControls } from "../AppControls";
@@ -23,6 +27,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
   const [selectedItemId, setSelectedItemId] = useState<string>(structure.rootItemId);
   const [addingParentId, setAddingParentId] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   const selectedItem = structure.items[selectedItemId] ?? structure.items[structure.rootItemId];
 
@@ -43,6 +48,20 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
 
   const handleSelect = (itemId: string) => {
     setSelectedItemId(itemId);
+  };
+
+  // A default is only a starting point, but two defaults in a pick-one group
+  // would fight, so choosing one clears the others in that group.
+  const setDefaultSelected = (itemId: string, value: boolean) => {
+    controller.updateItem(itemId, { defaultSelected: value || undefined });
+    const group = value ? getGroupForMember(structure, itemId) : undefined;
+    if (group?.max === 1) {
+      for (const memberId of group.memberItemIds) {
+        if (memberId !== itemId && structure.items[memberId]?.defaultSelected) {
+          controller.updateItem(memberId, { defaultSelected: undefined });
+        }
+      }
+    }
   };
 
   const canHaveGroups = selectedItem.type === "assembly" || selectedItem.type === "category";
@@ -79,6 +98,16 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
         )}
         <button
           type="button"
+          aria-pressed={showRules}
+          className={`shrink-0 rounded-lg border px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:opacity-90 ${
+            showRules ? "border-[var(--accent)] bg-[var(--accent-soft)]" : "border-[var(--line)]"
+          }`}
+          onClick={() => setShowRules((v) => !v)}
+        >
+          Säännöt ({Object.keys(structure.rules).length})
+        </button>
+        <button
+          type="button"
           className="shrink-0 rounded-lg bg-[var(--accent-soft)] px-3 py-1.5 text-sm font-medium text-[var(--ink)] transition hover:opacity-90 disabled:opacity-50"
           disabled={saving}
           onClick={onSave}
@@ -96,6 +125,16 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
         <AppControls />
       </header>
 
+      {showRules ? (
+        <RulesPage
+          structure={structure}
+          initialFilterItemId={selectedItem.id}
+          onAdd={controller.addRule}
+          onUpdate={controller.updateRule}
+          onDelete={controller.deleteRule}
+          onBack={() => setShowRules(false)}
+        />
+      ) : (
       <div className="grid flex-1 grid-cols-[minmax(224px,288px)_minmax(0,1fr)_minmax(300px,336px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-[minmax(224px,288px)_minmax(0,1fr)]">
 
         <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
@@ -132,7 +171,12 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
             key={selectedItem.id}
             item={selectedItem}
             structureId={structure.id}
+            isRoot={selectedItem.id === structure.rootItemId}
+            attributeDefaults={structure.attributeDefaults ?? {}}
+            attributeKeys={collectAttributeKeys(structure)}
+            onSetAttributeDefault={controller.setAttributeDefault}
             onChange={(changes) => controller.updateItem(selectedItem.id, changes)}
+            onDefaultChange={(value) => setDefaultSelected(selectedItem.id, value)}
           />
         </div>
 
@@ -152,21 +196,21 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
                 onUpdateGroup={controller.updateGroup}
                 onDeleteGroup={controller.deleteGroup}
                 onUpdateItemRequired={(itemId, required) => controller.updateItem(itemId, { required })}
+                onUpdateItemDefault={setDefaultSelected}
               />
             </div>
           )}
 
           <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
-            <RulesEditor
-              structure={structure}
-              onAdd={controller.addRule}
-              onUpdate={controller.updateRule}
-              onDelete={controller.deleteRule}
-              focusItemId={selectedItem.id}
-            />
+            <RulesSummary structure={structure} selectedItemId={selectedItem.id} onOpenRules={() => setShowRules(true)} />
+          </div>
+
+          <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-4 shadow-[var(--shadow)]">
+            <GlobalAttributesPanel structure={structure} onSetDefault={controller.setAttributeDefault} />
           </div>
         </div>
       </div>
+      )}
 
       {addingParentId && (
         <AddItemDialog

@@ -43,6 +43,11 @@ export interface Item {
    * Ignored for items that are members of a SelectionGroup.
    */
   required?: boolean;
+  /**
+   * Pre-selected when the simulation starts (or is reset). Only a starting
+   * point: the user can still change or deselect it, it never locks the choice.
+   */
+  defaultSelected?: boolean;
 }
 
 export interface SelectionGroup {
@@ -76,6 +81,8 @@ export interface ProductStructure {
   items: Record<string, Item>;
   groups: Record<string, SelectionGroup>;
   rules: Record<string, ConditionalRule>;
+  /** Global default value per attribute key (see domain/attributes.ts). */
+  attributeDefaults?: Record<string, string>;
   createdAt?: number;
   updatedAt?: number;
 }

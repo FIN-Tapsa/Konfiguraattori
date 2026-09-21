@@ -5,6 +5,7 @@
 import { useCallback, useMemo, useState } from "react";
 import type { Item, ProductStructure } from "../types";
 import * as tree from "../domain/tree";
+import { setAttributeDefault as applyAttributeDefault } from "../domain/attributes";
 import { validateStructure } from "../domain/validation";
 
 export function useProductStructure(initial: ProductStructure) {
@@ -58,6 +59,10 @@ export function useProductStructure(initial: ProductStructure) {
 
   const replaceStructure = useCallback((s: ProductStructure) => {
     setStructure(s);
+  }, []);
+
+  const setAttributeDefault = useCallback((key: string, value: string) => {
+    setStructure((s) => applyAttributeDefault(s, key, value));
   }, []);
 
   const addGroup = useCallback((parentItemId: string, name: string, memberItemIds: string[]) => {
@@ -127,6 +132,7 @@ export function useProductStructure(initial: ProductStructure) {
     updateGroup,
     deleteGroup,
     addRule,
+    setAttributeDefault,
     updateRule,
     deleteRule,
   };

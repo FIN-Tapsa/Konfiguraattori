@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ProductStructure } from "../../types";
 import { computeDerivedState, createInitialSelection, getGroupStatuses, toggleSelection } from "../../domain/simulation";
 import { SimulationNode } from "./SimulationNode";
+import { SimulationTree } from "./SimulationTree";
 import { SummaryPanel } from "./SummaryPanel";
 import { AppControls } from "../AppControls";
 
@@ -33,8 +34,29 @@ function countGroupProgress(structure: ProductStructure, selected: Set<string>):
   return { total, done };
 }
 
+type ViewMode = "cards" | "tree";
+const VIEW_MODE_KEY = "konfiguraattori.simulationViewMode";
+
+function loadViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_MODE_KEY) === "tree" ? "tree" : "cards";
+  } catch {
+    return "cards";
+  }
+}
+
 export function SimulationView({ structure, onBackToEditor }: SimulationViewProps) {
   const [selected, setSelected] = useState<Set<string>>(() => createInitialSelection(structure));
+  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode);
+
+  const changeViewMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // Remembering the choice is a convenience only.
+    }
+  };
 
   const derived = computeDerivedState(structure, selected);
   const progress = countGroupProgress(structure, selected);
@@ -85,17 +107,44 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
             </div>
           </div>
           <div className="p-5">
-            <p className="mb-4 text-sm text-[var(--ink-2)]">
-              {root?.description || "Käy läpi valinnat kuten myyntikonfiguraattorissa."}
-            </p>
-            <SimulationNode
-              structure={structure}
-              parentItemId={structure.rootItemId}
-              selected={selected}
-              effects={derived.effects}
-              onToggle={handleToggle}
-              depth={0}
-            />
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <p className="min-w-0 flex-1 text-sm text-[var(--ink-2)]">
+                {root?.description || "Käy läpi valinnat kuten myyntikonfiguraattorissa."}
+              </p>
+              <div role="group" aria-label="Esitystila" className="flex shrink-0 overflow-hidden rounded-full border border-[var(--line)] text-xs">
+                {(["cards", "tree"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={viewMode === mode}
+                    onClick={() => changeViewMode(mode)}
+                    className={`px-3 py-1 transition ${
+                      viewMode === mode ? "bg-[var(--accent)] font-medium text-[var(--on-accent)]" : "text-[var(--ink-2)] hover:bg-[var(--panel-2)]"
+                    }`}
+                  >
+                    {mode === "cards" ? "Kortit" : "Puu"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {viewMode === "cards" ? (
+              <SimulationNode
+                structure={structure}
+                parentItemId={structure.rootItemId}
+                selected={selected}
+                effects={derived.effects}
+                onToggle={handleToggle}
+                depth={0}
+              />
+            ) : (
+              <SimulationTree
+                structure={structure}
+                parentItemId={structure.rootItemId}
+                selected={selected}
+                effects={derived.effects}
+                onToggle={handleToggle}
+              />
+            )}
           </div>
         </div>
         <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">

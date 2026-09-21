@@ -133,6 +133,19 @@ export function validateStructure(structure: ProductStructure): ValidationIssue[
     }
   }
 
+  // More than one default in a max=1 group: only the last one applied would survive.
+  for (const group of Object.values(structure.groups)) {
+    if (group.max !== 1) continue;
+    const defaults = group.memberItemIds.filter((m) => structure.items[m]?.defaultSelected);
+    if (defaults.length > 1) {
+      issues.push({
+        level: "warning",
+        message: `Ryhmässä "${group.name}" voi valita vain yhden, mutta oletusvalintoja on ${defaults.length}.`,
+        groupId: group.id,
+      });
+    }
+  }
+
   // Rules.
   for (const rule of Object.values(structure.rules)) {
     if (!structure.items[rule.sourceItemId]) {
@@ -153,6 +166,37 @@ export function validateStructure(structure: ProductStructure): ValidationIssue[
       issues.push({
         level: "error",
         message: `Sääntö viittaa samaan nimikkeeseen sekä lähteenä että kohteena.`,
+        ruleId: rule.id,
+      });
+    }
+  }
+
+  // Excludes is bidirectional, so a reverse excludes rule is redundant and a
+  // requires rule between two items that also exclude each other can never hold.
+  const rules = Object.values(structure.rules);
+  const excludedPairs = new Set<string>();
+  const seenExcludes = new Set<string>();
+  for (const rule of rules) {
+    if (rule.type !== "excludes") continue;
+    const name = (id: string) => structure.items[id]?.name ?? id;
+    const key = `${rule.sourceItemId}|${rule.targetItemId}`;
+    const reverse = `${rule.targetItemId}|${rule.sourceItemId}`;
+    excludedPairs.add(key);
+    excludedPairs.add(reverse);
+    if (seenExcludes.has(reverse)) {
+      issues.push({
+        level: "warning",
+        message: `Poissulkeminen "${name(rule.targetItemId)}" ja "${name(rule.sourceItemId)}" välillä on määritelty kahteen kertaan - poissulkeminen toimii aina molempiin suuntiin, toisen säännön voi poistaa.`,
+        ruleId: rule.id,
+      });
+    }
+    seenExcludes.add(key);
+  }
+  for (const rule of rules) {
+    if (rule.type === "requires" && excludedPairs.has(`${rule.sourceItemId}|${rule.targetItemId}`)) {
+      issues.push({
+        level: "error",
+        message: `Ristiriita: "${structure.items[rule.sourceItemId]?.name ?? rule.sourceItemId}" vaatii nimikkeen "${structure.items[rule.targetItemId]?.name ?? rule.targetItemId}", mutta samojen nimikkeiden välillä on myös poissulkemissääntö.`,
         ruleId: rule.id,
       });
     }
