@@ -10,6 +10,11 @@
 // Scope is the narrow `drive.file` scope: the app can only see/manage files
 // it itself creates, not the user's whole Drive.
 //
+// Alternative without any Google sign-in for the uploader: a small Google Apps
+// Script web app (apps-script/upload.gs) that runs as the folder's owner and
+// saves posted images into that one folder. Set VITE_DRIVE_UPLOAD_URL to use
+// it; the OAuth flow below is then not used at all.
+//
 // The sign-in popup MUST be opened synchronously from a click handler
 // (connectDrive), otherwise browsers block it. So sign-in is its own button
 // and the GIS script is preloaded, instead of signing in lazily on upload.
@@ -19,7 +24,12 @@ const FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
 const SCOPE = "https://www.googleapis.com/auth/drive.file";
 const APP_FOLDER_NAME = "Konfiguraattori-kuvat";
 
-export const isDriveConfigured = Boolean(CLIENT_ID && FOLDER_ID);
+const UPLOAD_URL = import.meta.env.VITE_DRIVE_UPLOAD_URL;
+const UPLOAD_SECRET = import.meta.env.VITE_DRIVE_UPLOAD_SECRET;
+
+/** True when uploads go through the Apps Script web app (no Google sign-in needed). */
+export const isDriveUploadProxy = Boolean(UPLOAD_URL);
+export const isDriveConfigured = isDriveUploadProxy || Boolean(CLIENT_ID && FOLDER_ID);
 
 /** Error with a user-facing message plus a list of concrete things to try. */
 export class DriveError extends Error {
@@ -231,7 +241,59 @@ async function getOrCreateAppFolder(token: string): Promise<string> {
   return ((await create.json()) as { id: string }).id;
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new DriveError("Tiedoston lukeminen epäonnistui."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadViaProxy(file: File): Promise<string> {
+  const data = await fileToBase64(file);
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 90_000);
+  let response: Response;
+  try {
+    // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script cannot answer one).
+    response = await fetch(UPLOAD_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ secret: UPLOAD_SECRET ?? "", name: file.name, mimeType: file.type || "application/octet-stream", data }),
+      signal: controller.signal,
+    });
+  } catch {
+    throw new DriveError("Yhteys latauspalveluun (Apps Script) epäonnistui tai aikakatkaistiin.", [
+      "Tarkista verkkoyhteys ja että VITE_DRIVE_UPLOAD_URL on oikea (päättyy /exec).",
+      "Suuret kuvat voivat kestää: kokeile pienempää kuvaa.",
+    ]);
+  } finally {
+    window.clearTimeout(timer);
+  }
+
+  let result: { ok?: boolean; id?: string; error?: string };
+  try {
+    result = await response.json();
+  } catch {
+    throw new DriveError("Latauspalvelu ei palauttanut odotettua vastausta.", [
+      'Apps Script -julkaisun "Who has access" -asetuksen pitää olla "Anyone" ja "Execute as" -asetuksen "Me".',
+      "Muutettuasi skriptiä julkaise uusi versio (Deploy -> Manage deployments -> Edit -> New version).",
+    ]);
+  }
+  if (!result.ok || !result.id) {
+    throw new DriveError(
+      `Latauspalvelu hylkäsi kuvan: ${result.error ?? "tuntematon virhe"}.`,
+      result.error === "unauthorized"
+        ? ["VITE_DRIVE_UPLOAD_SECRET ei vastaa skriptin SECRET-arvoa."]
+        : [],
+    );
+  }
+  return `https://drive.google.com/thumbnail?id=${result.id}&sz=w1000`;
+}
+
 export async function uploadImageToDrive(file: File): Promise<string> {
+  if (isDriveUploadProxy) return uploadViaProxy(file);
   if (!hasDriveToken()) {
     throw new DriveError("Et ole kirjautunut Google Driveen.", ['Paina "Kirjaudu Google Driveen" ja yritä uudelleen.']);
   }

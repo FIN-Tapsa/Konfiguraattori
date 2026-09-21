@@ -12,6 +12,9 @@ interface ImportMetaEnv {
   /** Optional: Google Drive -kuvatallennuksen OAuth-client-id ja kohdekansion id. */
   readonly VITE_GOOGLE_DRIVE_CLIENT_ID?: string;
   readonly VITE_GOOGLE_DRIVE_FOLDER_ID?: string;
+  /** Optional: Apps Script web app -osoite kuvien lataukseen ilman Google-kirjautumista (ks. apps-script/upload.gs). */
+  readonly VITE_DRIVE_UPLOAD_URL?: string;
+  readonly VITE_DRIVE_UPLOAD_SECRET?: string;
 }
 
 interface ImportMeta {

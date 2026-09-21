@@ -11,6 +11,7 @@ import {
   connectDrive,
   hasDriveToken,
   isDriveConfigured,
+  isDriveUploadProxy,
   preloadDriveScript,
   uploadImageToDrive,
 } from "../../google/drive";
@@ -48,7 +49,7 @@ export function ItemPanel({
 }: ItemPanelProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<{ message: string; hints: string[] } | null>(null);
-  const [driveConnected, setDriveConnected] = useState(hasDriveToken);
+  const [driveConnected, setDriveConnected] = useState(() => isDriveUploadProxy || hasDriveToken());
   const [typeChangeError, setTypeChangeError] = useState<string | null>(null);
   const [imageExpanded, setImageExpanded] = useState(true);
 
@@ -62,7 +63,7 @@ export function ItemPanel({
   };
 
   useEffect(() => {
-    if (isDriveConfigured) preloadDriveScript();
+    if (isDriveConfigured && !isDriveUploadProxy) preloadDriveScript();
   }, []);
 
   const toUploadError = (e: unknown, fallback: string) =>
@@ -87,7 +88,7 @@ export function ItemPanel({
       onChange({ imageUrl: url });
     } catch (e) {
       setUploadError(toUploadError(e, "Kuvan lataus Google Driveen epäonnistui."));
-      setDriveConnected(hasDriveToken());
+      setDriveConnected(isDriveUploadProxy || hasDriveToken());
     } finally {
       setUploading(false);
     }
@@ -288,7 +289,9 @@ export function ItemPanel({
                   </button>
                 )}
                 <p className="mt-0.5 text-xs text-[var(--ink-3)]">
-                  {driveConnected
+                  {isDriveUploadProxy
+                    ? "Kuva tallennetaan projektin Drive-kansioon, kirjautumista ei tarvita."
+                    : driveConnected
                     ? "Kirjautuminen voimassa (n. 1 h)."
                     : "Avautuu Google-kirjautumisikkuna - hyväksy pääsy omaan Drive-kansioosi. Salli ponnahdusikkunat, jos selain estää sen."}
                 </p>

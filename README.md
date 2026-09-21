@@ -297,6 +297,35 @@ sulkeutui ilman vastausta - syy selviää ikkunan sisällöstä):
   `drive.google.com/thumbnail?id=...`-kuvaosoitemuoto voi periaatteessa
   muuttua tulevaisuudessa.
 
+### Kuvien lataus ilman kirjautumista (Apps Script, suositeltu)
+
+Yllä oleva OAuth-lataus vaatii, että jokainen lataaja kirjautuu Googleen ja
+(Testing-tilassa) on Test users -listalla. Jos Drive-kansio on vain tätä
+projektia varten, helpompaa on pieni **Google Apps Script -web-sovellus**
+(`apps-script/upload.gs`): se ajetaan sinun tililläsi, tallentaa lähetetyt kuvat
+yhteen kansioon ja jakaa ne linkillä. Lataaja ei kirjaudu mihinkään, eikä
+mitään avaimia ole selaimessa - skripti pääsee vain siihen yhteen kansioon.
+
+1. Mene [script.google.com](https://script.google.com/) -> **Uusi projekti**,
+   liitä `apps-script/upload.gs` sisältö.
+2. Aseta `FOLDER_ID` (kansion id) ja `SECRET` (pitkä satunnainen merkkijono).
+3. **Deploy -> New deployment -> Web app**: *Execute as* = **Me**,
+   *Who has access* = **Anyone**. Hyväksy Drive-käyttöoikeus (Google varoittaa
+   omasta skriptistäsi: Advanced -> Go to ... (unsafe)). Kopioi **Web app URL**
+   (päättyy `/exec`).
+4. Täytä `.env` ja GitHub Secrets:
+   ```
+   VITE_DRIVE_UPLOAD_URL=<Web app URL>
+   VITE_DRIVE_UPLOAD_SECRET=<sama kuin SECRET skriptissä>
+   ```
+5. Muutettuasi skriptiä julkaise uusi versio (Deploy -> Manage deployments ->
+   Edit -> New version), muuten vanha koodi jää voimaan.
+
+Kun `VITE_DRIVE_UPLOAD_URL` on asetettu, OAuth-kirjautumista ei käytetä
+lainkaan. **Huom:** osoite ja `SECRET` päätyvät julkiseen JS-bundleen, joten
+kuka tahansa sivun avannut voi ladata kuvia kansioon (vain kuvia, max 8 MB
+kpl). Se sopii kansiolle, jossa ei ole muuta arkaluontoista.
+
 ## Kehitys
 
 ```bash
