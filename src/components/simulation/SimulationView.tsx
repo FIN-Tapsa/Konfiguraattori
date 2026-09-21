@@ -71,7 +71,7 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="mx-[18px] mt-[18px] flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]">
+      <header className="mx-[18px] mt-[18px] max-[700px]:mx-3 max-[700px]:mt-3 flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]">
         <button
           type="button"
           className="shrink-0 text-sm text-[var(--ink-2)] transition hover:text-[var(--ink)]"
@@ -79,13 +79,13 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
         >
           ← Takaisin rakennustilaan
         </button>
-        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-[var(--ink)]">Simulointi: {structure.name}</h1>
+        <h1 className="min-w-[10rem] flex-1 truncate text-lg font-semibold text-[var(--ink)]">Simulointi: {structure.name}</h1>
         <AppControls />
       </header>
 
-      <div className="grid flex-1 grid-cols-[minmax(0,1fr)_minmax(320px,372px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-1">
-        <div className="min-h-0 overflow-auto rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
-          <div className="image-placeholder flex h-[340px] w-full items-center justify-center rounded-t-[20px]">
+      <div className="grid flex-1 grid-cols-[minmax(0,1fr)_minmax(320px,372px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-1 max-[700px]:gap-3 max-[700px]:p-3">
+        <div className="min-w-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)] min-[1101px]:min-h-0 min-[1101px]:overflow-auto">
+          <div className="image-placeholder flex h-[340px] max-[700px]:h-[200px] w-full items-center justify-center rounded-t-[20px]">
             {root?.imageUrl ? (
               <img src={root.imageUrl} alt="" className="h-full w-full rounded-t-[20px] object-cover" />
             ) : (
@@ -106,7 +106,7 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
               />
             </div>
           </div>
-          <div className="p-5">
+          <div className="p-5 max-[700px]:p-4">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <p className="min-w-0 flex-1 text-sm text-[var(--ink-2)]">
                 {root?.description || "Käy läpi valinnat kuten myyntikonfiguraattorissa."}
@@ -147,7 +147,7 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
             )}
           </div>
         </div>
-        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
+        <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)] min-[1101px]:min-h-0">
           <SummaryPanel derived={derived} onReset={handleReset} />
         </div>
       </div>

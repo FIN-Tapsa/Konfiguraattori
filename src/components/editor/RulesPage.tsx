@@ -78,8 +78,8 @@ export function RulesPage({ structure, initialFilterItemId, onAdd, onUpdate, onD
   };
 
   return (
-    <div className="min-h-0 flex-1 overflow-auto p-[18px]">
-      <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)]">
+    <div className="min-h-0 flex-1 overflow-auto p-[18px] max-[700px]:p-3">
+      <div className="mx-auto flex max-w-5xl flex-col gap-4 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)] max-[700px]:p-4">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"

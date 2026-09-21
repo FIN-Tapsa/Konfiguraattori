@@ -11,7 +11,7 @@ export default function App() {
   const { enabled: backgroundEnabled } = useBackgroundEnabled();
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[var(--bg)] text-[var(--ink)]">
+    <div className="app-shell relative w-full overflow-hidden bg-[var(--bg)] text-[var(--ink)]">
       <AnimatedBackground enabled={backgroundEnabled} />
       <div className="relative z-10 h-full">
         <PasswordGate>

@@ -67,8 +67,8 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
   const canHaveGroups = selectedItem.type === "assembly" || selectedItem.type === "category";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <header className="mx-[18px] mt-[18px] flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]">
+    <div className="flex h-full flex-col overflow-hidden max-[700px]:overflow-y-auto">
+      <header className="mx-[18px] mt-[18px] max-[700px]:mx-3 max-[700px]:mt-3 flex min-h-[60px] shrink-0 flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]">
         <button
           type="button"
           className="shrink-0 text-sm text-[var(--ink-2)] transition hover:text-[var(--ink)]"
@@ -78,7 +78,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
         </button>
         <input
           type="text"
-          className="min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel-2)]"
+          className="min-w-[12rem] flex-1 rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel-2)]"
           value={structure.name}
           onChange={(e) => controller.replaceStructure({ ...structure, name: e.target.value })}
         />
@@ -135,9 +135,9 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           onBack={() => setShowRules(false)}
         />
       ) : (
-      <div className="grid flex-1 grid-cols-[minmax(224px,288px)_minmax(0,1fr)_minmax(300px,336px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-[minmax(224px,288px)_minmax(0,1fr)]">
+      <div className="grid flex-1 max-[700px]:flex-none max-[700px]:overflow-visible grid-cols-[minmax(224px,288px)_minmax(0,1fr)_minmax(300px,336px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-[minmax(224px,288px)_minmax(0,1fr)] max-[700px]:grid-cols-1 max-[700px]:gap-3 max-[700px]:p-3">
 
-        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
+        <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)] min-[1101px]:min-h-0 max-[1100px]:h-[55vh] max-[700px]:h-[45vh]">
           <Outliner
             structure={structure}
             selectedItemId={selectedItemId}
@@ -152,7 +152,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           />
         </div>
 
-        <div className="min-h-0 overflow-auto rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)]">
+        <div className="min-w-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)] min-[1101px]:min-h-0 min-[1101px]:overflow-auto max-[700px]:p-4">
           <nav className="mb-3 truncate font-mono text-xs text-[var(--ink-3)]">
             {breadcrumb.map((crumb, idx) => (
               <span key={crumb.id}>
@@ -180,7 +180,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           />
         </div>
 
-        <div className="flex min-h-0 flex-col gap-[18px] max-[1100px]:col-span-full">
+        <div className="flex flex-col gap-[18px] min-[1101px]:min-h-0 max-[1100px]:col-span-full max-[700px]:gap-3">
           {showValidation && (
             <div className="rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
               <ValidationPanel issues={issues} onFocusItem={handleSelect} />

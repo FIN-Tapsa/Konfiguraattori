@@ -54,7 +54,7 @@ export function AttributesEditor({ attributes, overrides, onChange, defaults, ke
           <option key={k} value={k} />
         ))}
       </datalist>
-      <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-1 bg-[var(--panel)] px-2 py-1.5 text-xs font-medium text-[var(--ink-3)]">
+      <div className="grid grid-cols-[1fr_1fr_auto_auto_auto] gap-1 bg-[var(--panel)] max-[700px]:hidden px-2 py-1.5 text-xs font-medium text-[var(--ink-3)]">
         <span>Nimi</span>
         <span>Arvo</span>
         <span className="text-center">Alkuperä</span>
@@ -65,10 +65,10 @@ export function AttributesEditor({ attributes, overrides, onChange, defaults, ke
         {attributes.map((attr, index) => {
           const isOverride = attr.key !== "" && overrides.includes(attr.key);
           return (
-            <div key={index} className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center gap-1 px-2 py-1.5">
+            <div key={index} className="grid grid-cols-[1fr_1fr_auto_auto_auto] items-center gap-1 px-2 py-1.5 max-[700px]:flex max-[700px]:flex-wrap max-[700px]:gap-1.5">
               <input
                 type="text"
-                className="min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 font-mono text-xs text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel)]"
+                className="min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 max-[700px]:min-w-[40%] max-[700px]:flex-1 max-[700px]:border-[var(--line)] font-mono text-xs text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel)]"
                 placeholder="esim. paino_kg"
                 list="attribute-key-suggestions"
                 value={attr.key}
@@ -77,7 +77,7 @@ export function AttributesEditor({ attributes, overrides, onChange, defaults, ke
               />
               <input
                 type="text"
-                className="min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-sm text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel)]"
+                className="min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 max-[700px]:min-w-[40%] max-[700px]:flex-1 max-[700px]:border-[var(--line)] text-sm text-[var(--ink)] outline-none transition hover:border-[var(--line)] focus:border-[var(--accent)] focus:bg-[var(--panel)]"
                 placeholder="esim. 1200"
                 value={attr.value}
                 onChange={(e) => updateEntry(index, { value: e.target.value })}

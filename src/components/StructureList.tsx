@@ -101,7 +101,7 @@ export function StructureList({ onOpen }: StructureListProps) {
   return (
     <div className="mx-auto max-w-3xl">
       <header
-        className="mx-[18px] mt-[18px] flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]"
+        className="mx-[18px] mt-[18px] max-[700px]:mx-3 max-[700px]:mt-3 flex min-h-[60px] flex-wrap items-center gap-3 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] px-[18px] py-[11px] shadow-[var(--shadow)]"
       >
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold tracking-tight text-[var(--ink)]">Tuoterakenteet</h1>
@@ -112,7 +112,7 @@ export function StructureList({ onOpen }: StructureListProps) {
         <AppControls />
       </header>
 
-      <div className="m-[18px] flex flex-col gap-[18px]">
+      <div className="m-[18px] max-[700px]:m-3 flex flex-col gap-[18px] max-[700px]:gap-3">
         {!isFirebaseConfigured && (
           <div className="rounded-[14px] border border-[var(--accent-line)] bg-[var(--accent-soft)] p-3 text-sm text-[var(--ink)]">
             Firebase ei ole konfiguroitu (.env puuttuu tai on vaillinainen). Tallennus Firestoreen ei ole käytössä -

@@ -95,6 +95,12 @@ body,
   height: 100%;
 }
 
+/* dvh keeps the bottom of the page above the mobile browser toolbar; vh is the fallback. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
