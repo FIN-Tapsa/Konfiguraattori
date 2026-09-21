@@ -297,6 +297,11 @@ sulkeutui ilman vastausta - syy selviää ikkunan sisällöstä):
   `drive.google.com/thumbnail?id=...`-kuvaosoitemuoto voi periaatteessa
   muuttua tulevaisuudessa.
 
+> **Huom:** tiedoston lataus (Google Drive / Firebase Storage) on toistaiseksi
+> pois käytöstä nimikepaneelissa; kuvat lisätään liittämällä kuvan URL. Latauksen
+> saa takaisin asettamalla `IMAGE_UPLOAD_ENABLED = true` tiedostossa
+> `src/components/editor/ItemPanel.tsx`.
+
 ### Kuvien lataus ilman kirjautumista (Apps Script, suositeltu)
 
 Yllä oleva OAuth-lataus vaatii, että jokainen lataaja kirjautuu Googleen ja

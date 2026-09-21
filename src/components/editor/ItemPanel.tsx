@@ -27,6 +27,10 @@ interface ItemPanelProps {
   onDefaultChange: (defaultSelected: boolean) => void;
 }
 
+// Image upload (Google Drive / Firebase Storage) is switched off for now; only
+// pasting an image URL is offered. Set to true to bring the upload box back.
+const IMAGE_UPLOAD_ENABLED = false;
+
 const TYPE_LABELS: Record<ItemType, string> = {
   single: "Yksittäinen nimike",
   assembly: "Kokoonpano",
@@ -63,7 +67,7 @@ export function ItemPanel({
   };
 
   useEffect(() => {
-    if (isDriveConfigured && !isDriveUploadProxy) preloadDriveScript();
+    if (IMAGE_UPLOAD_ENABLED && isDriveConfigured && !isDriveUploadProxy) preloadDriveScript();
   }, []);
 
   const toUploadError = (e: unknown, fallback: string) =>
@@ -263,6 +267,7 @@ export function ItemPanel({
             drive.google.com/thumbnail?id=TIEDOSTON_ID&sz=w1000).
           </p>
 
+          {IMAGE_UPLOAD_ENABLED && (
           <div className="rounded-[12px] bg-[var(--panel-2)] p-3">
             {isDriveConfigured ? (
               <>
@@ -328,6 +333,7 @@ export function ItemPanel({
               </div>
             )}
           </div>
+          )}
 
           <div>
             <h3 className="mb-1 text-sm font-semibold text-[var(--ink)]">Attribuutit</h3>
