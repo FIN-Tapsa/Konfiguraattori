@@ -311,8 +311,10 @@ mitään avaimia ole selaimessa - skripti pääsee vain siihen yhteen kansioon.
 2. Aseta `FOLDER_ID` (kansion id) ja `SECRET` (pitkä satunnainen merkkijono).
 3. **Deploy -> New deployment -> Web app**: *Execute as* = **Me**,
    *Who has access* = **Anyone**. Hyväksy Drive-käyttöoikeus (Google varoittaa
-   omasta skriptistäsi: Advanced -> Go to ... (unsafe)). Kopioi **Web app URL**
-   (päättyy `/exec`).
+   omasta skriptistäsi: Advanced -> Go to ... (unsafe)). Jos lupa-ikkuna ei
+   aukea, valitse funktiovalikosta `authorize`, paina **Run** ja hyväksy lupa
+   siellä (muuten lataus antaa virheen "Käyttö estetty: DriveApp"), ja julkaise
+   sitten uusi versio. Kopioi **Web app URL** (päättyy `/exec`).
 4. Täytä `.env` ja GitHub Secrets:
    ```
    VITE_DRIVE_UPLOAD_URL=<Web app URL>

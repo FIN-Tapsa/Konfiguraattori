@@ -30,6 +30,13 @@ function doPost(e) {
   }
 }
 
+// Run this once by hand in the editor (function menu -> authorize -> Run) to
+// grant the Drive permission, then publish a new version. Without it the web
+// app fails with "Access denied: DriveApp".
+function authorize() {
+  DriveApp.getFolderById(FOLDER_ID).getName();
+}
+
 function respond(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
