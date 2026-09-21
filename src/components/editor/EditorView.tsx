@@ -104,7 +104,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           }`}
           onClick={() => setShowRules((v) => !v)}
         >
-          Säännöt ({Object.keys(structure.rules).length})
+          Säännöt ({Object.keys(structure.rules).length + Object.keys(structure.attributeRules ?? {}).length})
         </button>
         <button
           type="button"
@@ -132,6 +132,9 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           onAdd={controller.addRule}
           onUpdate={controller.updateRule}
           onDelete={controller.deleteRule}
+          onAddAttributeRule={controller.addAttributeRule}
+          onUpdateAttributeRule={controller.updateAttributeRule}
+          onDeleteAttributeRule={controller.deleteAttributeRule}
           onBack={() => setShowRules(false)}
         />
       ) : (

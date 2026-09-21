@@ -5,9 +5,10 @@
 // The simulation never mutates the stored ProductStructure - it is a pure
 // walk over it driven by a `selected: Set<string>` of item ids.
 
-import type { ConditionalRule, Item, ProductStructure } from "../types";
+import type { Item, ProductStructure } from "../types";
 import { getParentId, subtreeIds } from "./tree";
 import { getGroupForMember, getGroupsForParent, type EffectiveGroup } from "./groups";
+import { expandAttributeRules, type EngineRule } from "./attributeRules";
 
 /**
  * Root plus every item flagged `defaultSelected` that is reachable and allowed:
@@ -87,15 +88,18 @@ export interface RuleEffects {
 /**
  * "excludes" is bidirectional: A excludes B implies B excludes A. The stored
  * rule stays one row; the mirror is derived here so existing data works as-is.
+ * Attribute rules (domain/attributeRules.ts) are expanded into one-way excludes
+ * here too: choosing the trigger drops incompatible items, it is never blocked by them.
  * Exception: two members of the same max=1 group already exclude each other
  * by the group itself, and a mirrored block would make it impossible to switch
  * between them, so no mirror is created for them.
  */
-export function withMirroredExcludes(structure: ProductStructure): ConditionalRule[] {
-  const result: ConditionalRule[] = [];
-  for (const rule of Object.values(structure.rules)) {
+export function withMirroredExcludes(structure: ProductStructure): EngineRule[] {
+  const result: EngineRule[] = [];
+  const all: EngineRule[] = [...Object.values(structure.rules), ...expandAttributeRules(structure)];
+  for (const rule of all) {
     result.push(rule);
-    if (rule.type !== "excludes") continue;
+    if (rule.type !== "excludes" || rule.oneWay) continue;
     const group = getGroupForMember(structure, rule.sourceItemId);
     if (group && group.max === 1 && group.memberItemIds.includes(rule.targetItemId)) continue;
     result.push({ ...rule, sourceItemId: rule.targetItemId, targetItemId: rule.sourceItemId });
@@ -132,7 +136,9 @@ function applyRules(structure: ProductStructure, selectedIn: Set<string>): { sel
           changed = true;
         }
       } else {
-        const label = `Ei sallittu yhdessä: "${source.name}"`;
+        const label = rule.via
+          ? `"${source.name}" (${rule.via})`
+          : `Ei sallittu yhdessä: "${source.name}"`;
         const reasons = disabledExcluded.get(rule.targetItemId) ?? [];
         if (!reasons.includes(label)) {
           reasons.push(label);

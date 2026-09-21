@@ -3,7 +3,7 @@
 // validation issues recomputed on every change.
 
 import { useCallback, useMemo, useState } from "react";
-import type { Item, ProductStructure } from "../types";
+import type { AttributeRule, Item, ProductStructure } from "../types";
 import * as tree from "../domain/tree";
 import { setAttributeDefault as applyAttributeDefault } from "../domain/attributes";
 import { validateStructure } from "../domain/validation";
@@ -59,6 +59,31 @@ export function useProductStructure(initial: ProductStructure) {
 
   const replaceStructure = useCallback((s: ProductStructure) => {
     setStructure(s);
+  }, []);
+
+  const addAttributeRule = useCallback((rule: Omit<AttributeRule, "id">) => {
+    const id = crypto.randomUUID();
+    setStructure((s) => ({
+      ...s,
+      attributeRules: { ...s.attributeRules, [id]: { ...rule, id } },
+      updatedAt: Date.now(),
+    }));
+  }, []);
+
+  const updateAttributeRule = useCallback((ruleId: string, changes: Partial<AttributeRule>) => {
+    setStructure((s) => {
+      const existing = s.attributeRules?.[ruleId];
+      if (!existing) return s;
+      return { ...s, attributeRules: { ...s.attributeRules, [ruleId]: { ...existing, ...changes, id: ruleId } }, updatedAt: Date.now() };
+    });
+  }, []);
+
+  const deleteAttributeRule = useCallback((ruleId: string) => {
+    setStructure((s) => {
+      const attributeRules = { ...s.attributeRules };
+      delete attributeRules[ruleId];
+      return { ...s, attributeRules, updatedAt: Date.now() };
+    });
   }, []);
 
   const setAttributeDefault = useCallback((key: string, value: string) => {
@@ -132,6 +157,9 @@ export function useProductStructure(initial: ProductStructure) {
     updateGroup,
     deleteGroup,
     addRule,
+    addAttributeRule,
+    updateAttributeRule,
+    deleteAttributeRule,
     setAttributeDefault,
     updateRule,
     deleteRule,

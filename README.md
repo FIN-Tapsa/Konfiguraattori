@@ -106,6 +106,26 @@ nimikkeisiin `id`:n kautta. Toteutus: `src/domain/simulation.ts`.
   editorissa valitun nimikkeen mukaan ("Näytä kaikki" poistaa suodatuksen).
   Oikean paneelin Säännöt-osio näyttää vain valitun nimikkeen säännöt.
 
+### Attribuuttisäännöt
+
+Nimikkeen attribuutti voi ohjata valintaa (`ProductStructure.attributeRules`,
+`src/domain/attributeRules.ts`): "kun valittuna on nimike, jolla on attribuutti
+`A = a`, nimikkeet joilla on `B = b` eivät ole valittavissa, ja jo valitut
+putoavat pois". Esimerkki: nimike "Ajotehtävä: CBRN" saa attribuutin
+`ajotehtävä = cbrn`, ja kaikille CBRN-käyttöön sopimattomille nimikkeille
+merkitään `cbrn = ei`; yksi sääntö estää ne kaikki kerralla.
+
+- Säännöt luodaan sääntösivun **Attribuuttisäännöt**-osiossa; sivu näyttää
+  kunkin säännön ehdon täyttävät ja estettävät nimikkeet.
+- **Yksisuuntainen:** ehdon täyttävän nimikkeen voi aina valita (ajotehtävä
+  voittaa), eikä aiemmin valittu nimike estä sitä.
+- Avaimet ja arvot verrataan trimmattuina ja ilman isojen/pienten kirjainten
+  eroa.
+- Moottorissa säännöt laajennetaan tavallisiksi poissulkeviksi säännöiksi
+  (`withMirroredExcludes`), ja simuloinnissa syy näkyy muodossa
+  `"Nimike" (attribuuttisääntö: ajotehtävä = cbrn)`. Validointi varoittaa,
+  jos ehdon tai eston attribuuttia ei löydy yhdeltäkään nimikkeeltä.
+
 ### Globaalit attribuutit
 
 Attribuuttiavaimelle voi asettaa yhden oletusarvon koko rakenteeseen
@@ -193,9 +213,10 @@ säilyttämiseksi vienti/tuonti-kierroksella):
 **Säännöt**-sarakkeet: `rule_id`, `type` (`requires`/`excludes`),
 `source_item_id`, `target_item_id`, `note`.
 
-Valinnainen kolmas välilehti **Attribuutit** (`key`, `default_value`) sisältää
-globaalit attribuuttioletukset; se viedään vain jos oletuksia on, ja tuonti
-toimii myös ilman sitä.
+Valinnaiset lisävälilehdet: **Attribuutit** (`key`, `default_value`) sisältää
+globaalit attribuuttioletukset ja **Attribuuttisäännöt** (`rule_id`, `when_key`,
+`when_value`, `block_key`, `block_value`, `note`) attribuuttisäännöt. Ne viedään
+vain jos niitä on, ja tuonti toimii myös ilman niitä.
 
 Tuonti validoi rivi riviltä: ei syklejä, kaikki `parent_id`- ja
 sääntöviittaukset osoittavat olemassa oleviin id:ihin, jokainen `group_id`

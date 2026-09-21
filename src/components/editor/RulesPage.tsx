@@ -2,7 +2,8 @@
 // Opened from the header; filtered to one item when the editor had one selected.
 
 import { useState } from "react";
-import type { ConditionalRule, ProductStructure } from "../../types";
+import type { AttributeRule, ConditionalRule, ProductStructure } from "../../types";
+import { AttributeRulesSection } from "./AttributeRulesSection";
 import { ItemPicker } from "../ItemPicker";
 
 interface RulesPageProps {
@@ -12,6 +13,9 @@ interface RulesPageProps {
   onAdd: (rule: Omit<ConditionalRule, "id">) => void;
   onUpdate: (ruleId: string, changes: Partial<ConditionalRule>) => void;
   onDelete: (ruleId: string) => void;
+  onAddAttributeRule: (rule: Omit<AttributeRule, "id">) => void;
+  onUpdateAttributeRule: (ruleId: string, changes: Partial<AttributeRule>) => void;
+  onDeleteAttributeRule: (ruleId: string) => void;
   onBack: () => void;
 }
 
@@ -49,7 +53,17 @@ function TypeSelect({
   );
 }
 
-export function RulesPage({ structure, initialFilterItemId, onAdd, onUpdate, onDelete, onBack }: RulesPageProps) {
+export function RulesPage({
+  structure,
+  initialFilterItemId,
+  onAdd,
+  onUpdate,
+  onDelete,
+  onAddAttributeRule,
+  onUpdateAttributeRule,
+  onDeleteAttributeRule,
+  onBack,
+}: RulesPageProps) {
   const [filterItemId, setFilterItemId] = useState<string | null>(
     initialFilterItemId && initialFilterItemId !== structure.rootItemId ? initialFilterItemId : null,
   );
@@ -90,7 +104,7 @@ export function RulesPage({ structure, initialFilterItemId, onAdd, onUpdate, onD
           </button>
           <h2 className="text-lg font-semibold text-[var(--ink)]">Säännöt</h2>
           <span className="text-xs text-[var(--ink-3)]">
-            {filterItemId ? `${rules.length} / ${allRules.length}` : allRules.length}
+            {filterItemId ? `${rules.length} / ${allRules.length}` : allRules.length} nimikesääntöä
           </span>
         </div>
 
@@ -184,6 +198,16 @@ export function RulesPage({ structure, initialFilterItemId, onAdd, onUpdate, onD
             </p>
           )}
         </ul>
+
+        <hr className="border-[var(--line)]" />
+
+        <AttributeRulesSection
+          structure={structure}
+          filterItemId={filterItemId}
+          onAdd={onAddAttributeRule}
+          onUpdate={onUpdateAttributeRule}
+          onDelete={onDeleteAttributeRule}
+        />
       </div>
     </div>
   );

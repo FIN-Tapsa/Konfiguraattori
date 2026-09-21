@@ -74,6 +74,22 @@ export interface ConditionalRule {
   note?: string;
 }
 
+/**
+ * Attribute-driven exclusion: while a selected item has the attribute
+ * whenKey = whenValue, items having blockKey = blockValue cannot be selected,
+ * and any of them already selected drop out. One-way: the trigger can always be
+ * chosen. Keys/values are compared trimmed and case-insensitively.
+ */
+export interface AttributeRule {
+  id: string;
+  whenKey: string;
+  whenValue: string;
+  blockKey: string;
+  blockValue: string;
+  /** Free-text note shown in the editor only. */
+  note?: string;
+}
+
 export interface ProductStructure {
   id: string;
   name: string;
@@ -81,6 +97,7 @@ export interface ProductStructure {
   items: Record<string, Item>;
   groups: Record<string, SelectionGroup>;
   rules: Record<string, ConditionalRule>;
+  attributeRules?: Record<string, AttributeRule>;
   /** Global default value per attribute key (see domain/attributes.ts). */
   attributeDefaults?: Record<string, string>;
   createdAt?: number;

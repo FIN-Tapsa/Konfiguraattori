@@ -2,6 +2,7 @@
 
 import type { ProductStructure, ValidationIssue } from "../types";
 import { getParentId, listAllItemIds } from "./tree";
+import { blockedItems, triggerItems } from "./attributeRules";
 
 export function validateStructure(structure: ProductStructure): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
@@ -197,6 +198,32 @@ export function validateStructure(structure: ProductStructure): ValidationIssue[
       issues.push({
         level: "error",
         message: `Ristiriita: "${structure.items[rule.sourceItemId]?.name ?? rule.sourceItemId}" vaatii nimikkeen "${structure.items[rule.targetItemId]?.name ?? rule.targetItemId}", mutta samojen nimikkeiden välillä on myös poissulkemissääntö.`,
+        ruleId: rule.id,
+      });
+    }
+  }
+
+  // Attribute rules: warn about rules that can never do anything.
+  for (const rule of Object.values(structure.attributeRules ?? {})) {
+    if (!rule.whenKey.trim() || !rule.blockKey.trim()) {
+      issues.push({
+        level: "error",
+        message: "Attribuuttisäännöltä puuttuu ehdon tai eston attribuutin nimi.",
+        ruleId: rule.id,
+      });
+      continue;
+    }
+    const label = `${rule.whenKey.trim()} = ${rule.whenValue.trim()} -> ${rule.blockKey.trim()} = ${rule.blockValue.trim()}`;
+    if (triggerItems(structure, rule).length === 0) {
+      issues.push({
+        level: "warning",
+        message: `Attribuuttisääntö (${label}): yhdelläkään nimikkeellä ei ole ehdon attribuuttia, joten sääntö ei koskaan aktivoidu.`,
+        ruleId: rule.id,
+      });
+    } else if (blockedItems(structure, rule).length === 0) {
+      issues.push({
+        level: "warning",
+        message: `Attribuuttisääntö (${label}): yhdelläkään nimikkeellä ei ole estettävää attribuuttia, joten sääntö ei estä mitään.`,
         ruleId: rule.id,
       });
     }

@@ -1,7 +1,7 @@
 // Excel (.xlsx) import/export for a ProductStructure.
 //
-// Two sheets: "Nimikkeet" (items) and "Säännöt" (rules), plus an optional
-// "Attribuutit" sheet (global attribute defaults). The columns listed in
+// Two sheets: "Nimikkeet" (items) and "Säännöt" (rules), plus optional
+// "Attribuutit" (global attribute defaults) and "Attribuuttisäännöt" sheets. The columns listed in
 // the product spec are always read/written; a handful of extra columns
 // (code, attributes, overrides_parent_attributes, required) are included too
 // so a round-trip export -> import does not lose data the spec's core model
@@ -9,11 +9,13 @@
 
 import * as XLSX from "xlsx";
 import { v4 as uuid } from "uuid";
-import type { AttributeEntry, ConditionalRule, Item, ProductStructure, SelectionGroup } from "../types";
+import type { AttributeEntry, AttributeRule, ConditionalRule, Item, ProductStructure, SelectionGroup } from "../types";
 
 const ITEMS_SHEET = "Nimikkeet";
 const RULES_SHEET = "Säännöt";
 const ATTRIBUTES_SHEET = "Attribuutit";
+const ATTRIBUTE_RULES_SHEET = "Attribuuttisäännöt";
+const ATTRIBUTE_RULE_COLUMNS = ["rule_id", "when_key", "when_value", "block_key", "block_value", "note"] as const;
 
 const ITEM_COLUMNS = [
   "id",
@@ -143,6 +145,22 @@ export function exportToWorkbook(structure: ProductStructure): void {
   }));
   if (defaultRows.length > 0) {
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(defaultRows, { header: ["key", "default_value"] }), ATTRIBUTES_SHEET);
+  }
+
+  const attributeRuleRows = Object.values(structure.attributeRules ?? {}).map((r) => ({
+    rule_id: r.id,
+    when_key: r.whenKey,
+    when_value: r.whenValue,
+    block_key: r.blockKey,
+    block_value: r.blockValue,
+    note: r.note ?? "",
+  }));
+  if (attributeRuleRows.length > 0) {
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet(attributeRuleRows, { header: [...ATTRIBUTE_RULE_COLUMNS] }),
+      ATTRIBUTE_RULES_SHEET,
+    );
   }
 
   const safeName = structure.name.replace(/[^\p{L}\p{N}_-]+/gu, "_").slice(0, 60) || "tuoterakenne";
@@ -392,6 +410,26 @@ export async function importFromFile(file: File, structureName: string): Promise
     }
   }
 
+  // Optional sheet, like "Attribuutit".
+  const attributeRules: Record<string, AttributeRule> = {};
+  const attributeRulesSheet = workbook.Sheets[ATTRIBUTE_RULES_SHEET];
+  if (attributeRulesSheet) {
+    for (const row of XLSX.utils.sheet_to_json<Record<string, unknown>>(attributeRulesSheet, { defval: "" })) {
+      const whenKey = String(row.when_key ?? "").trim();
+      const blockKey = String(row.block_key ?? "").trim();
+      if (!whenKey || !blockKey) continue;
+      const id = String(row.rule_id ?? "").trim() || uuid();
+      attributeRules[id] = {
+        id,
+        whenKey,
+        whenValue: String(row.when_value ?? "").trim(),
+        blockKey,
+        blockValue: String(row.block_value ?? "").trim(),
+        note: String(row.note ?? "").trim() || undefined,
+      };
+    }
+  }
+
   const structure: ProductStructure = {
     id: uuid(),
     name: structureName,
@@ -400,6 +438,7 @@ export async function importFromFile(file: File, structureName: string): Promise
     groups,
     rules,
     ...(Object.keys(attributeDefaults).length > 0 ? { attributeDefaults } : {}),
+    ...(Object.keys(attributeRules).length > 0 ? { attributeRules } : {}),
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
