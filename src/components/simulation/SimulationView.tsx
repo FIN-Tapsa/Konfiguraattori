@@ -84,7 +84,7 @@ export function SimulationView({ structure, onBackToEditor }: SimulationViewProp
       </header>
 
       <div className="grid flex-1 grid-cols-[minmax(0,1fr)_minmax(320px,372px)] gap-[18px] overflow-auto p-[18px] max-[1100px]:grid-cols-1">
-        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
+        <div className="min-h-0 overflow-auto rounded-[20px] border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow)]">
           <div className="image-placeholder flex h-[340px] w-full items-center justify-center rounded-t-[20px]">
             {root?.imageUrl ? (
               <img src={root.imageUrl} alt="" className="h-full w-full rounded-t-[20px] object-cover" />

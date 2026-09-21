@@ -152,7 +152,7 @@ export function EditorView({ controller, onSave, saving, onBack, onEnterSimulati
           />
         </div>
 
-        <div className="min-h-0 rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)]">
+        <div className="min-h-0 overflow-auto rounded-[20px] border border-[var(--line)] bg-[var(--panel)] p-5 shadow-[var(--shadow)]">
           <nav className="mb-3 truncate font-mono text-xs text-[var(--ink-3)]">
             {breadcrumb.map((crumb, idx) => (
               <span key={crumb.id}>
